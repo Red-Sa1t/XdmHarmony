@@ -1,0 +1,16 @@
+/node_modules
+/oh_modules
+/local.properties
+/.idea
+**/build
+/.hvigor
+.cxx
+/.clangd
+/.clang-format
+/.clang-tidy
+**/.test
+/.appanalyzer
+src/main/ets/core/engine/.hvigor/
+
+# run-hypium 真值门禁默认输出（未传 --output 时落在仓内）
+/test-results/

@@ -1,0 +1,924 @@
+{
+  "string": [
+    {
+      "name": "module_desc",
+      "value": "Multi-connection download manager with browser capture and video download"
+    },
+    {
+      "name": "EntryAbility_desc",
+      "value": "XDM Download Manager main window"
+    },
+    {
+      "name": "EntryAbility_label",
+      "value": "XDM Download Manager"
+    },
+    {
+      "name": "probe_index_title",
+      "value": "XDM 迁移探针"
+    },
+    {
+      "name": "probe_index_empty",
+      "value": "暂无探针单元"
+    },
+    {
+      "name": "probe_env_title",
+      "value": "环境自检（P0-U0）"
+    },
+    {
+      "name": "probe_run_all",
+      "value": "运行全部"
+    },
+    {
+      "name": "probe_rerun",
+      "value": "重跑"
+    },
+    {
+      "name": "probe_step_run",
+      "value": "执行"
+    },
+    {
+      "name": "probe_copy_log",
+      "value": "复制日志"
+    },
+    {
+      "name": "probe_copied",
+      "value": "已复制"
+    },
+    {
+      "name": "probe_back",
+      "value": "返回"
+    },
+    {
+      "name": "probe_status_pending",
+      "value": "待运行"
+    },
+    {
+      "name": "probe_status_running",
+      "value": "运行中"
+    },
+    {
+      "name": "probe_status_done",
+      "value": "已完成"
+    },
+    {
+      "name": "probe_status_error",
+      "value": "出错"
+    },
+    {
+      "name": "probe_http_title",
+      "value": "HTTP 能力探针（P0-U2）"
+    },
+    {
+      "name": "probe_http_source_hint",
+      "value": "测试源地址（主机局域网 IP，如 http://192.168.1.20:8080）"
+    },
+    {
+      "name": "probe_p1u1_title",
+      "value": "数据层探针（P1-U1）"
+    },
+    {
+      "name": "probe_p1u1_persist_hint",
+      "value": "点击 S8 写入重启持久行，然后杀进程重启应用"
+    },
+    {
+      "name": "probe_p1u1_verify_hint",
+      "value": "重启拉起本页后点击 S9 核对持久行"
+    },
+    {
+      "name": "nd_title",
+      "value": "New Download"
+    },
+    {
+      "name": "nd_address",
+      "value": "Address"
+    },
+    {
+      "name": "nd_file",
+      "value": "File"
+    },
+    {
+      "name": "lbl_save_in",
+      "value": "Save in"
+    },
+    {
+      "name": "nd_download_now",
+      "value": "Download Now"
+    },
+    {
+      "name": "nd_cancel",
+      "value": "Cancel"
+    },
+    {
+      "name": "msg_invalid_url",
+      "value": "Download address is invalid or unsupported"
+    },
+    {
+      "name": "msg_no_file",
+      "value": "Please enter file name"
+    },
+    {
+      "name": "lbl_active",
+      "value": "Active"
+    },
+    {
+      "name": "lbl_complete",
+      "value": "Complete"
+    },
+    {
+      "name": "probe_p1u2_title",
+      "value": "下载链路探针（P1-U2）"
+    },
+    {
+      "name": "probe_p1u2_source_hint",
+      "value": "测试源地址（主机局域网 IP，如 http://192.168.1.20:8080）"
+    },
+    {
+      "name": "probe_p1u2_restart_hint",
+      "value": "完成后杀进程重启应用，再回到本页点击 S9 核对历史"
+    },
+    {
+      "name": "probe_p2u1_title",
+      "value": "下载链路探针（P2-U1）"
+    },
+    {
+      "name": "probe_p2u1_source_hint",
+      "value": "测试源地址（主机局域网 IP，如 http://192.168.1.20:8080）"
+    },
+    {
+      "name": "probe_p2u1_pause_hint",
+      "value": "S5 使用慢速源 /slow.bin?ms=80 扩大暂停窗口；完成后可重跑 S2"
+    },
+    {
+      "name": "probe_p2u2_title",
+      "value": "断点续传探针（P2-U2）"
+    },
+    {
+      "name": "probe_p2u2_source_hint",
+      "value": "测试源地址（主机局域网 IP，如 http://192.168.1.20:8080）"
+    },
+    {
+      "name": "probe_p2u2_restart_hint",
+      "value": "S1~S3 跑完后按手册 force-stop 重启，再进本页点 S4（慢源 /slow.bin?ms=600）"
+    },
+    {
+      "name": "probe_p3u1_title",
+      "value": "P3-U1 队列调度探针"
+    },
+    {
+      "name": "probe_p3u1_source_hint",
+      "value": "测试源地址（主机局域网 IP，禁 127.0.0.1）"
+    },
+    {
+      "name": "probe_p3u2_title",
+      "value": "P3-U2 限速+定时调度探针"
+    },
+    {
+      "name": "probe_p3u2_source_hint",
+      "value": "测试源地址（主机局域网 IP，禁 127.0.0.1）"
+    },
+    {
+      "name": "desc_new",
+      "value": "New"
+    },
+    {
+      "name": "desc_del",
+      "value": "Delete"
+    },
+    {
+      "name": "ctx_open_file",
+      "value": "Open"
+    },
+    {
+      "name": "ctx_open_folder",
+      "value": "Open folder"
+    },
+    {
+      "name": "menu_pause",
+      "value": "Pause"
+    },
+    {
+      "name": "menu_resume",
+      "value": "Resume"
+    },
+    {
+      "name": "lbl_search",
+      "value": "Search"
+    },
+    {
+      "name": "sort_name",
+      "value": "Name"
+    },
+    {
+      "name": "sort_date",
+      "value": "Date"
+    },
+    {
+      "name": "sort_size",
+      "value": "Size"
+    },
+    {
+      "name": "sort_status",
+      "value": "Status"
+    },
+    {
+      "name": "stat_downloading",
+      "value": "Downloading"
+    },
+    {
+      "name": "stat_stopped",
+      "value": "Stopped"
+    },
+    {
+      "name": "stat_finished",
+      "value": "Finished"
+    },
+    {
+      "name": "stat_waiting",
+      "value": "Waiting"
+    },
+    {
+      "name": "settings_monitoring",
+      "value": "Browser monitoring"
+    },
+    {
+      "name": "desc_q_title",
+      "value": "Queue and scheduler"
+    },
+    {
+      "name": "lbl_support_page",
+      "value": "Help and support"
+    },
+    {
+      "name": "menu_delete_completed",
+      "value": "Remove finished downloads"
+    },
+    {
+      "name": "lbl_new_download",
+      "value": "New download"
+    },
+    {
+      "name": "lbl_video_download",
+      "value": "Video download"
+    },
+    {
+      "name": "menu_batch_download",
+      "value": "Batch download"
+    },
+    {
+      "name": "title_settings",
+      "value": "Settings"
+    },
+    {
+      "name": "msg_media_capture",
+      "value": "Media grabber"
+    },
+    {
+      "name": "menu_export",
+      "value": "Export"
+    },
+    {
+      "name": "menu_import",
+      "value": "Import"
+    },
+    {
+      "name": "menu_lang",
+      "value": "Language"
+    },
+    {
+      "name": "lbl_report_problem",
+      "value": "Report a problem"
+    },
+    {
+      "name": "menu_update",
+      "value": "Check for update"
+    },
+    {
+      "name": "menu_about",
+      "value": "About XDM"
+    },
+    {
+      "name": "menu_exit",
+      "value": "Exit"
+    },
+    {
+      "name": "cat_documents",
+      "value": "Document"
+    },
+    {
+      "name": "cat_music",
+      "value": "Music"
+    },
+    {
+      "name": "cat_videos",
+      "value": "Video"
+    },
+    {
+      "name": "cat_compressed",
+      "value": "Compressed"
+    },
+    {
+      "name": "cat_programs",
+      "value": "Application"
+    },
+    {
+      "name": "btn_cancel_queue",
+      "value": "Cancel queue"
+    },
+    {
+      "name": "probe_p4u1_title",
+      "value": "P4-U1 主窗口走查探针"
+    },
+    {
+      "name": "probe_p4u1_source_hint",
+      "value": "测试源地址（主机局域网 IP，禁 127.0.0.1）"
+    },
+    {
+      "name": "probe_p4u1_check_hint",
+      "value": "主页面走查完成后逐项勾选，再点击 S4 执行"
+    },
+    {
+      "name": "probe_p4u2_title",
+      "value": "P4-U2 对话框包走查探针"
+    },
+    {
+      "name": "probe_p4u2_source_hint",
+      "value": "测试源地址（主机局域网 IP，禁 127.0.0.1；S3 需 /slow.bin?ms=300）"
+    },
+    {
+      "name": "probe_p4u2_check_hint",
+      "value": "主页面逐对话框走查完成后勾选 26 项，再单步执行 S5"
+    },
+    {
+      "name": "btn_stop_processing",
+      "value": "Stop"
+    },
+    {
+      "name": "dwn_hide",
+      "value": "Hide"
+    },
+    {
+      "name": "msg_dwn_stop",
+      "value": "Download stopped"
+    },
+    {
+      "name": "stat_assembling",
+      "value": "Assembling"
+    },
+    {
+      "name": "msg_time_left",
+      "value": "Time left"
+    },
+    {
+      "name": "lbl_show_progress",
+      "value": "Show progress"
+    },
+    {
+      "name": "speed_limit_title",
+      "value": "Speed limit"
+    },
+    {
+      "name": "msg_no_speed_limit",
+      "value": "No speed limit"
+    },
+    {
+      "name": "menu_speed_limiter",
+      "value": "Speed limiter"
+    },
+    {
+      "name": "msg_speed_limit",
+      "value": "Download speed limit [KB/Sec ](0 unlimited)"
+    },
+    {
+      "name": "bat_select_items",
+      "value": "Select items to download"
+    },
+    {
+      "name": "vid_chk",
+      "value": "Select all"
+    },
+    {
+      "name": "nd_more",
+      "value": "More..."
+    },
+    {
+      "name": "nd_download_later",
+      "value": "Download Later"
+    },
+    {
+      "name": "lbl_queue_opt3",
+      "value": "Do not use queue"
+    },
+    {
+      "name": "msg_cat_folder_missing",
+      "value": "Download folder required"
+    },
+    {
+      "name": "bat_pattern",
+      "value": "Pattern"
+    },
+    {
+      "name": "bat_links",
+      "value": "Links"
+    },
+    {
+      "name": "bat_paste_link",
+      "value": "Please paste download links below"
+    },
+    {
+      "name": "bat_leading_zero",
+      "value": "Use leading zero"
+    },
+    {
+      "name": "lbl_batch_desc",
+      "value": "Download a group of sequential files using asterisk wild card (example http://xdman.sourceforge.net/images/edge*.png)"
+    },
+    {
+      "name": "lbl_batch_asterisk",
+      "value": "Replace asterisk with"
+    },
+    {
+      "name": "lbl_batch_letter",
+      "value": "Letters"
+    },
+    {
+      "name": "lbl_batch_num",
+      "value": "Numbers"
+    },
+    {
+      "name": "lbl_batch_from",
+      "value": "From"
+    },
+    {
+      "name": "lbl_batch_to",
+      "value": "To"
+    },
+    {
+      "name": "lbl_batch_file1",
+      "value": "First file"
+    },
+    {
+      "name": "lbl_batch_file2",
+      "value": "Second file"
+    },
+    {
+      "name": "lbl_batch_filen",
+      "value": "Last file"
+    },
+    {
+      "name": "msg_ok",
+      "value": "OK"
+    },
+    {
+      "name": "menu_refresh_link",
+      "value": "Refresh link"
+    },
+    {
+      "name": "ref_waiting_for_link",
+      "value": "Waiting for download link..."
+    },
+    {
+      "name": "msg_ref_link_msg",
+      "value": "New download link is accepted"
+    },
+    {
+      "name": "no_refresh_link",
+      "value": "Link refresh is not available for this download"
+    },
+    {
+      "name": "nd_auth",
+      "value": "Authentication"
+    },
+    {
+      "name": "desc_user",
+      "value": "User Name"
+    },
+    {
+      "name": "desc_pass",
+      "value": "Password"
+    },
+    {
+      "name": "msg_no_username",
+      "value": "User name required"
+    },
+    {
+      "name": "menu_delete_dwn",
+      "value": "Delete downloads"
+    },
+    {
+      "name": "del_sel_text",
+      "value": "Are you sure you want to delete selected downloads?"
+    },
+    {
+      "name": "lbl_delete_file",
+      "value": "Delete files from disk"
+    },
+    {
+      "name": "cd_title",
+      "value": "Download Complete"
+    },
+    {
+      "name": "msg_dont_show_again",
+      "value": "Don't show this again"
+    },
+    {
+      "name": "desc_adv_title",
+      "value": "Advanced settings"
+    },
+    {
+      "name": "desc_net4",
+      "value": "Proxy settings"
+    },
+    {
+      "name": "nd_no_proxy",
+      "value": "No Proxy"
+    },
+    {
+      "name": "nd_manual_proxy",
+      "value": "Manual Proxy"
+    },
+    {
+      "name": "proxy_host",
+      "value": "Proxy Host"
+    },
+    {
+      "name": "proxy_port",
+      "value": "Proxy Port"
+    },
+    {
+      "name": "net_system_proxy",
+      "value": "Use system proxy settings"
+    },
+    {
+      "name": "settings_general",
+      "value": "General settings"
+    },
+    {
+      "name": "settings_network",
+      "value": "Network settings"
+    },
+    {
+      "name": "settings_cred",
+      "value": "Password manager"
+    },
+    {
+      "name": "settings_adv",
+      "value": "Advanced settings"
+    },
+    {
+      "name": "desc_save_q",
+      "value": "Save"
+    },
+    {
+      "name": "desc_filetypes",
+      "value": "XDM will automatically take over downloads from browser for below file types"
+    },
+    {
+      "name": "desc_def",
+      "value": "Defaults"
+    },
+    {
+      "name": "desc_videotypes",
+      "value": "XDM will show download option when below video formats are played in browser"
+    },
+    {
+      "name": "lbl_min_video_size",
+      "value": "Download video larger than"
+    },
+    {
+      "name": "desc_siteexceptions",
+      "value": "Do not automatically capture downloads from below web sites"
+    },
+    {
+      "name": "menu_clip_add",
+      "value": "Monitor clipboard"
+    },
+    {
+      "name": "lbl_get_timestamp",
+      "value": "Get timestamp from server"
+    },
+    {
+      "name": "msg_show_media_notification",
+      "value": "Show Download Video notification."
+    },
+    {
+      "name": "show_dwn_prg",
+      "value": "Show download progress window"
+    },
+    {
+      "name": "show_dwn_complete",
+      "value": "Show download complete dialog"
+    },
+    {
+      "name": "lbl_start_auto",
+      "value": "Start download automatically"
+    },
+    {
+      "name": "lbl_overwrite_existing",
+      "value": "Overwrite existing file"
+    },
+    {
+      "name": "lbl_temp_folder",
+      "value": "Temporary folder"
+    },
+    {
+      "name": "msg_max_download",
+      "value": "Maximum simultaneous downloads"
+    },
+    {
+      "name": "settings_auto_cat",
+      "value": "Automatically select download folder based on file type"
+    },
+    {
+      "name": "settings_folder",
+      "value": "Default download folder"
+    },
+    {
+      "name": "settings_dark_theme",
+      "value": "Use dark theme if possible"
+    },
+    {
+      "name": "settings_cat",
+      "value": "Download categories"
+    },
+    {
+      "name": "settings_cat_name",
+      "value": "Category name"
+    },
+    {
+      "name": "settings_cat_types",
+      "value": "File types"
+    },
+    {
+      "name": "settings_cat_folder",
+      "value": "Download folder"
+    },
+    {
+      "name": "settings_cat_add",
+      "value": "Add"
+    },
+    {
+      "name": "settings_cat_edit",
+      "value": "Edit"
+    },
+    {
+      "name": "msg_double_click_action",
+      "value": "Double click on download item"
+    },
+    {
+      "name": "msg_open_file",
+      "value": "Open file"
+    },
+    {
+      "name": "btn_browse",
+      "value": "Browse..."
+    },
+    {
+      "name": "msg_halt",
+      "value": "Shutdown computer after all download completes"
+    },
+    {
+      "name": "msg_awake",
+      "value": "Prevent hibernate or sleep during downloads"
+    },
+    {
+      "name": "exec_cmd",
+      "value": "Run a program after all download finishes"
+    },
+    {
+      "name": "exe_anti_vir",
+      "value": "Scan file with antivirus after download"
+    },
+    {
+      "name": "antivir_cmd",
+      "value": "Antivirus executable"
+    },
+    {
+      "name": "antivir_args",
+      "value": "Command line parameters"
+    },
+    {
+      "name": "auto_start",
+      "value": "Launch XDM when system starts"
+    },
+    {
+      "name": "msg_fallback_ua",
+      "value": "User agent to be used if download is added manually"
+    },
+    {
+      "name": "desc_net1",
+      "value": "Connection timeout in seconds"
+    },
+    {
+      "name": "desc_net2",
+      "value": "Segments per download"
+    },
+    {
+      "name": "net_max_retry",
+      "value": "Maximum retry limit"
+    },
+    {
+      "name": "desc_host",
+      "value": "Host/Server"
+    },
+    {
+      "name": "desc_net7",
+      "value": "Proxy username"
+    },
+    {
+      "name": "desc_net8",
+      "value": "Proxy password"
+    },
+    {
+      "name": "msg_host_name_missing",
+      "value": "Host name required"
+    },
+    {
+      "name": "msg_cat_name_missing",
+      "value": "Category name required"
+    },
+    {
+      "name": "msg_cat_file_types_missing",
+      "value": "File types required"
+    },
+    {
+      "name": "msg_lang1",
+      "value": "Select language"
+    },
+    {
+      "name": "lang_follow_system",
+      "value": "Follow system"
+    },
+    {
+      "name": "lang_chinese",
+      "value": "Chinese"
+    },
+    {
+      "name": "lang_english",
+      "value": "English"
+    },
+    {
+      "name": "probe_p4u3_title",
+      "value": "P4-U3 设置页走查探针"
+    },
+    {
+      "name": "probe_p4u3_check_hint",
+      "value": "设置页逐项走查完成后勾选 31 项，再单步执行 S5"
+    },
+    {
+      "name": "notify_finished_title",
+      "value": "Download finished"
+    },
+    {
+      "name": "probe_p5u1_title",
+      "value": "P5-U1 后台任务+通知探针"
+    },
+    {
+      "name": "probe_p5u1_check_hint",
+      "value": "按手册完成后台存活走查（关窗→等待→恢复）后单步执行 S5"
+    },
+    {
+      "name": "clipboard_permission_reason",
+      "value": "Used to detect copied download links"
+    },
+    {
+      "name": "msg_file_not_found",
+      "value": "The file has been moved,renamed or deleted"
+    },
+    {
+      "name": "no_item_selected",
+      "value": "Please select item to open"
+    },
+    {
+      "name": "msg_copy_failed",
+      "value": "Could not copy to the selected folder. The file is kept in the app Downloads folder."
+    },
+    {
+      "name": "msg_folder_picked",
+      "value": "Save folder recorded. Finished downloads will be copied to it."
+    },
+    {
+      "name": "probe_p5u2_title",
+      "value": "P5-U2 剪贴板+保存目录探针"
+    },
+    {
+      "name": "probe_p5u2_check_hint",
+      "value": "按手册完成剪贴板识别/保存目录/文件打开走查 10 项后单步执行 S5"
+    },
+    {
+      "name": "probe_p0u3_title",
+      "value": "扩展桥 8597 服务端探针（P0-U3）"
+    },
+    {
+      "name": "probe_p0u3_hint",
+      "value": "S3 需主机侧配合：先执行 hdc fport tcp:18597 tcp:8597，再 curl http://127.0.0.1:18597/sync（全套命令见手册），完成后回探针页点 S3\"执行\"复核"
+    },
+    {
+      "name": "probe_p6u1_title",
+      "value": "扩展桥八路由探针（P6-U1）"
+    },
+    {
+      "name": "probe_p6u1_hint",
+      "value": "S1~S9 全自动；主机侧自验=Node 脚本（手册 AI 自动轨），人工兜底=curl 命令集见手册；未知路径\"连接关闭且零应答字节=正确\""
+    },
+    {
+      "name": "msg_quality",
+      "value": "Quality"
+    },
+    {
+      "name": "msg_download",
+      "value": "Download"
+    },
+    {
+      "name": "msg_clear",
+      "value": "Clear"
+    },
+    {
+      "name": "msg_close",
+      "value": "Close"
+    },
+    {
+      "name": "probe_p6u2_title",
+      "value": "嗅探规则链+视频捕获探针（P6-U2）"
+    },
+    {
+      "name": "probe_p6u2_hint",
+      "value": "S1~S8 全自动；规则链用例表主机侧自验=node docs/probe/P6-U2-sniff-cases.js（SUMMARY pass=65 退出码 0）；捕获页走查=菜单打开媒体抓取页核对分组/全选/下载/清空（清单见手册）"
+    },
+    {
+      "name": "msg_download_save_failed",
+      "value": "保存下载失败，请重试。"
+    },
+    {
+      "name": "msg_video_download_unavailable",
+      "value": "暂不支持下载此视频格式。"
+    },
+    {
+      "name": "msg_refresh_save_failed",
+      "value": "更新下载链接失败。请重新发送链接，或停止等待。"
+    },
+    {
+      "name": "msg_refresh_browser_failed",
+      "value": "无法打开来源网页。请在浏览器中重新触发此下载。"
+    },
+    {
+      "name": "probe_p6u3_title",
+      "value": "链接刷新与持久化探针（P6-U3）"
+    },
+    {
+      "name": "probe_p0u4_title",
+      "value": "原生媒体处理探针（P0-U4）"
+    },
+    {
+      "name": "probe_p6u4_title",
+      "value": "自适应状态与清单探针（P6-U4）"
+    },
+    {
+      "name": "probe_p6u5_title",
+      "value": "自适应流式下载与组装探针（P6-U5）"
+    },
+    {
+      "name": "probe_p6u6_title",
+      "value": "自适应运行控制与续传探针（P6-U6）"
+    },
+    {
+      "name": "probe_p7u1_foundation_title",
+      "value": "DASH 解析纯函数探针（P7-U1-F）"
+    },
+    {
+      "name": "probe_p7u1_pipeline_title",
+      "value": "DASH 管线下载与组装探针（P7-U1-P）"
+    },
+    {
+      "name": "probe_p7u1_controller_title",
+      "value": "DASH 运行控制与续传探针（P7-U1-C）"
+    },
+    {
+      "name": "empty_finished",
+      "value": "暂无已完成下载"
+    },
+    {
+      "name": "empty_in_progress",
+      "value": "暂无进行中下载"
+    },
+    {
+      "name": "about_title",
+      "value": "About XDM"
+    },
+    {
+      "name": "about_text",
+      "value": "Version %s\n\nXDM Download Manager is based on the open-source Xtreme Download Manager (XDM) by subhra74.\n\nThis program is free software, distributed under the GNU General Public License v2.0, and comes with ABSOLUTELY NO WARRANTY.\n\nSource code: https://gitcode.com/Red_Salt/XdmHarmony\nUpstream project: https://github.com/subhra74/xdm"
+    },
+    {
+      "name": "remove_finished_confirm",
+      "value": "Remove all finished downloads from the list? Downloaded files on disk are kept."
+    },
+    {
+      "name": "btn_ok",
+      "value": "OK"
+    },
+    {
+      "name": "app_name",
+      "value": "XDM Download Manager"
+    }
+  ]
+}

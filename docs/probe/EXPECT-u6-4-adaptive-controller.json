@@ -1,0 +1,48 @@
+{
+  "unitId": "P6-U6",
+  "executionStatus": "device-run-2026-10-18",
+  "common": "Each S1-S4 requires no err/errCode, cleanupComplete=true, a complete exported detailFile, and facts matching that file. Every ready/paused/error field is an actual result; END does not prove business acceptance.",
+  "steps": [
+    {
+      "step": "BEGIN",
+      "expect": "runId=<HHmmss> filesDir=<sandbox>",
+      "note": "Retain one complete run with device, API, ABI, HAP hash and source-server events."
+    },
+    {
+      "step": "S1",
+      "expect": "firstKind=ready firstOwner=heldForAssembly firstParts=2 firstP0Bytes=65536 firstP1Bytes=65536 firstP0Complete=true firstP1Complete=true leaseCurrent=true busyKind=rejected busyOwner=notAcquired busyError=AdaptiveOwnerBusy attached=true asmStatus=success asmBytes=131072 asmClosed=true asmUncertain=false asmCleanup=true asmMediaStarted=false inputsAndSlotsUnchanged=true leaseReleased=true restoredKind=ready restoredOwner=heldForAssembly restoredParts=2 restoredP0Bytes=65536 restoredP1Bytes=65536 restoredP0Complete=true restoredP1Complete=true restoredLeaseReleased=true",
+      "hashes": {
+        "outputSha256": "feb1e4409d009e0ec502eaabe321f86b5197a881e9b765252ec8a75d6957596d"
+      },
+      "note": "firstError/asmError/restoredError are empty; generations are actual nonnegative values and restoredGeneration=firstGeneration. Exactly two server 206 requests cover bytes 0-65535 and 65536-131071; the restored run sends no new GET."
+    },
+    {
+      "step": "S2",
+      "expect": "pauseTimerFired=true pauseElapsedMs>=1000 pausedKind=paused pausedOwner=released pausedParts=1 pausedP0Complete=false 0<=pausedP0Bytes<524288 resumedKind=ready resumedOwner=heldForAssembly resumedParts=1 resumedP0Bytes=524288 resumedP0Complete=true asmStatus=success asmBytes=524288 asmClosed=true asmUncertain=false asmCleanup=true asmMediaStarted=false leaseReleased=true",
+      "hashes": {
+        "outputSha256": "61d1d9c5745bdaa4fab39240651bc242a5186b15393fd475082fcf6e84f400ab"
+      },
+      "note": "pausedError/resumedError/asmError empty. Server resume starts at actual pausedP0Bytes. Nonzero resume requires nonzeroPrefix=true, pausedP0Bytes>0 and oldPrefixUnchanged=true. A zero prefix only verifies zero-prefix restart; retain the nonzero-resume subcase as UNVERIFIED."
+    },
+    {
+      "step": "S3",
+      "expect": "firstKind=ready firstOwner=heldForAssembly stopRequested=true attached=false readerStarted=false drainedKind=ready drainedOwner=heldForAssembly leaseReleased=true leaseCurrentAfterRelease=false secondRelease=false",
+      "note": "firstError/drainedError empty. Drained generation, parts and completed bytes equal the first ready snapshot. The snapshot is not a live claim that the lease remains held after release."
+    },
+    {
+      "step": "S4",
+      "expect": "firstKind=ready firstOwner=heldForAssembly attached=true secondAttach=false asmStatus=stopped asmOutput=<empty> asmClosed=true asmUncertain=false asmCleanup=true asmMediaStarted=false stopNotifications=1 stopRequested=true drainedKind=ready drainedOwner=heldForAssembly leaseReleased=true",
+      "note": "firstError/drainedError empty; record the actual fixed asmError. Full details contain inputDirectory, beforeName0..3 and beforeSha256_0..3. Export all four files and compare externally. No new post-stop hash is claimed by the probe; missing files/comparisons remain UNVERIFIED."
+    },
+    {
+      "step": "SUMMARY",
+      "expect": "S1/S2/S3/S4 agree with the step lines",
+      "note": "The scaffold may compact SUMMARY to the first field per step; use complete step lines and details for the remaining predicates."
+    },
+    {
+      "step": "END",
+      "expect": "ok=true steps=4 elapsedMs>=0",
+      "note": "Scaffold completion only; target execution, file hashes, server requests and actual cleanup need independent adjudication."
+    }
+  ]
+}

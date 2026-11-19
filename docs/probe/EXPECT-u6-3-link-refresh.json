@@ -1,0 +1,12 @@
+{
+  "unitId": "P6-U3",
+  "steps": [
+    {"step": "BEGIN", "expect": "runId=<nonempty> filesDir=<sandbox>", "note": "Select one complete run; never combine runs or treat this marker as a result."},
+    {"step": "S1", "expect": "accepted=true mismatchConsumed=false revision=1 urlFresh=true contextFresh=true multiValues=one/two metadataKept=true oldRevision=0 nextRevision=1 oldSnapshotKept=true nextSnapshotFresh=true notifications=1 cleanup=true", "note": "Real RDB readback through production Store. Both snapshot predicates compare URL, Cookie, Referer and multivalue headers, rather than revision alone. This does not start a network scheduler."},
+    {"step": "S2", "expect": "staleWriteAccepted=false revision=1 urlFresh=true cookieFresh=true nameKept=true resolvedRevision=1 cleanup=true", "note": "Rejected stale whole-row update must change neither the transport nor the name."},
+    {"step": "S3", "expect": "oldConsumed=true newConsumed=true oldNotifications=0 newNotifications=1 oldCommitted=true newCommitted=true cleanup=true", "note": "Stop suppresses the obsolete observer; it does not roll back the already-started commit or clear the replacement watch."},
+    {"step": "S4", "expect": "invalidRejected=true retryConsumed=true removed=true deletedRejected=true rowAbsent=true tombstoned=true acceptedEvents=1 failedEvents=2 cleanup=true", "note": "Both matching failures reject rather than create a task. The accepted retry is the only success event."},
+    {"step": "SUMMARY", "expect": "Four segments S1/S2/S3/S4 consistent with step lines; first keys accepted=true, staleWriteAccepted=false, oldConsumed=true, invalidRejected=true", "note": "Summary may retain only each step's first key when the 1500-byte limit applies; missing detailed step evidence remains unverified."},
+    {"step": "END", "expect": "ok=true steps=4 elapsedMs>=0", "note": "This is a scaffold observation. Every step and cleanup result must independently match; runtime acceptance is pending until actual device logs exist."}
+  ]
+}

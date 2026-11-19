@@ -1,0 +1,6 @@
+{
+  "name": "libxdm_media.so",
+  "version": "1.0.0",
+  "description": "XDM local FFmpeg media processing native interface",
+  "types": "./index.d.ts"
+}

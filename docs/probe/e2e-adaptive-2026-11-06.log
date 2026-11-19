@@ -1,0 +1,57 @@
+# HLS/DASH business shell - real-device end-to-end acceptance, 2026-11-06
+# Device: MateBook Pro HAD-W24, API 23, serial 3QC0124B11000092. App com.neuohos.xdm (debug build of this change).
+# Host source: docs/probe/E2E-adaptive-host.cjs (ffmpeg testsrc2 320x180@25 + 440 Hz AAC, 20 s), reached by the
+# device as 127.0.0.1 through `hdc rport tcp:18800 tcp:18800` (throttled copy on 18810). Bridge driven through
+# `hdc fport tcp:18597 tcp:8597`; dialogs confirmed with uitest; outputs pulled with `hdc file recv -b`.
+
+## Capture (POST /media -> /sync)
+HLS master  -> E2E-HLS.ts "TS 320x180 390 Kbps", E2E-HLS.mp4 "MP4 320x180 371 Kbps English"   (host log: GET /hls/master.m3u8 cookie=e2e=hls)
+DASH mpd    -> E2E-DASH.mp4 "[MP4] 180p 332 Kbps"                                              (GET /dash/manifest.mpd cookie=e2e=dash)
+
+## HLS single track (muxed TS)
+requests: index.m3u8 + seg000..seg009 (Range bytes=0-, cookie e2e=hls)
+md5(cat seg*.ts)          35bda19492b289a6317410c1b94cae91
+md5(E2E-HLS.ts)           35bda19492b289a6317410c1b94cae91   (byte-identical, 955040 B)
+video decode md5 out/src  9823e36fff60b0c882bf6f4df16cc2b8 / 9823e36fff60b0c882bf6f4df16cc2b8
+audio decode md5 out/ref  bf77f2f7248886ad1ef659c25a349848 / bf77f2f7248886ad1ef659c25a349848
+
+## HLS dual track (video-only TS + AUDIO rendition) -> native remux
+requests: video/index.m3u8, audio/index.m3u8, 10 video + 11 audio segments
+E2E-HLS.mp4 874934 B, mov/mp4, h264 320x180 + aac 44100, 20.04 s
+video decode md5 out/src  9823e36fff60b0c882bf6f4df16cc2b8 / 9823e36fff60b0c882bf6f4df16cc2b8
+audio decode md5 out/ref  bf77f2f7248886ad1ef659c25a349848 / bf77f2f7248886ad1ef659c25a349848
+
+## DASH (fMP4 init + m4s, separate video/audio)
+requests: init-0, init-1, 10 + 10 chunks (interleaved)
+E2E-DASH.mp4 869750 B, 20.00 s; video decode md5 = source 9823e36f...
+audio PCM == reference (init-1 + chunk-1-*) from sample 0, last 1041 samples trimmed by remux to video duration
+
+## Kill -> restart -> resume (throttled HLS, 6 KB/s per response)
+progress before kill: 0% -> 20% at ~30 KB/s; requests: index.m3u8 + 9 segments; `aa force-stop`
+after relaunch: row Stopped; Resume -> requests: seg001 seg003 seg005 seg007 seg009 only (no manifest)
+E2E-SLOW.ts md5 35bda19492b289a6317410c1b94cae91 (== cat seg*.ts)
+
+## In-app pause -> resume (throttled DASH)
+paused at 27%: row Stopped/Resume; host request count 16 at pause+4 s and 16 at pause+9 s
+Resume -> 12 requests, all unfinished media chunks (no manifest, no init); finished
+E2E-PAUSE.mp4 video md5 9823e36f... ; audio md5 ff7dda1b9f9290ab528ce5907b8e1189 (== uninterrupted DASH output)
+
+## Public DASH (https://dash.akamaized.net/akamai/bbb_30fps/bbb_30fps.mpd, 180p 313 Kbps)
+first attempts: adaptive failed code=3004 detail=InvalidResponse; diagnostic: segment rejected chunk=c200/c280/c40 status=404
+device downloads.db descriptor: videoSegments[5] = https://dash.akamaized.net/akamai/bbb_30fps/bbb_30fps.mpd/bbb_30fps_320x180_200k/bbb_30fps_320x180_200k_5.m4v
+  -> SDK url.URL.parseURL('./', '<...>/bbb_30fps.mpd') kept the file name as a directory (host Node URL resolves correctly)
+control: same segment via the app HTTP engine and via device wget -> 200, 102502 B
+fix: RFC 3986 resolution in HlsUrlResolver; 4xx segment responses retryable (source HttpChunkDownloader parity)
+after fix: 35% @ 363 KB/s ... finished; bbb_public.mp4 21210186 B, 634.566667 s, h264 320x180 (19037 frames) + aac 48000
+full decode errors: none
+video decode md5 out/ref  9818f1b98846fa24753dcb7074c68404 / 9818f1b98846fa24753dcb7074c68404 (ref = host concat of the 160 CDN video files)
+audio PCM out == ref, 121782272 B, offset 0, nothing trimmed
+
+## Public HLS (https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8, "TS 320x184 240 Kbps 240")
+capture: 5 variants (720/240/380/480/1080); progress 9% -> 98% at 15-195 KB/s, then finished
+mux_public.ts 22418060 B, 634.63 s, h264 320x184 + aac 44100, full decode errors: none
+md5(cat 64 CDN segments) d3888da6aa50f2ef29494310403e20d6 == md5(mux_public.ts)
+
+## Observed, pre-existing
+SaveDirectory: copy to user folder failed (file kept in sandbox) errCode=13900001 after app restart
+  (u5-2 D2: picker grant is temporary; first-session copies succeeded)

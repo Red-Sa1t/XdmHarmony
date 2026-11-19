@@ -1,0 +1,129 @@
+{
+  "unitId": "P4-U3",
+  "slug": "u4-3-settings-i18n-theme",
+  "sessions": "双会话模型：①主会话——探针页点'运行全部'自动跑 S1→S5（S1/S2/S3/S4 autoRun，S5 autoRun=false 但 ProbePage.startSession 依步骤表全跑，S5 发射勾选面现状=占位行），恰 8 行 BEGIN+S1+S2+S3+S4+S5+SUMMARY+END，steps=5；②S5 单步会话——回探针页勾选 31 项清单后点 S5'执行'（runSingle 单步迷你会话），恰 4 行 BEGIN+S5+SUMMARY+END，steps=1。两段会话各自 BEGIN/END 按 runId 配对；S1~S4 判定取主会话，S5 判定取末次 runId（单步会话）。全局判据：每步骤恰一行，行格式命中 FORMAT 正则 ^\\[XDM_PROBE\\]\\[([A-Z0-9-]+)\\]\\[([A-Za-z0-9-]+)\\]\\s(.+)$；标记行不含通过/失败判定词；单行 <1500B。前置人工步骤：无（纯本机面，无需测试源）。运行次序：先设置页人工走查（31 项清单，PROBE 手册 §5）→探针页'运行全部'→回探针页勾选→单步 S5。确定性论证：S1/S2 纯读（Config getter 零副作用，getter 返回缓存拷贝不改内部态）；S3 全部写操作 try/finally 恢复基线（恢复失败也会继续读 restored 值暴露差异，不静默）；S4 写操作（setAppPreferredLanguage/setColorMode）均 finally 恢复基线，恢复值读回观测。重跑残留注记：S3/S4 逐轮 try/finally 恢复——无残留；历史异常中断（探针闪退）可能残留非默认键值，重装应用可复位到出厂默认（preferences 随应用卸载清除）。",
+  "steps": [
+    {
+      "step": "BEGIN",
+      "expect": "runId=<非空HHmmss> filesDir=<非空沙箱files路径>",
+      "note": "会话开始标记，与 END 按 runId 配对（主会话与 S5 单步会话各一个独立 runId）。探针页 autoStart=false——本行出现即'运行全部'或 S5'执行'已点击。"
+    },
+    {
+      "step": "S1",
+      "expect": "notificationTimeOut=0 isBrowserMonitoring=true showNotification=true lang=en-US darkTheme=true maxParallel=3 timeout=30 segments=8 retry=10 retryDelay=10 minVideo=1024 folderSel=0 conflict=0 startAuto=false fetchTs=false monitorClip=false dblClick=false shutdown=false keepAwake=true runCmd=false antivirus=false proxyType=0 proxyPort=0 uaPrefix=Mozilla/5.0 userSelFolder=0 credCount=0",
+      "note": "**47 键标量子集默认读回锚（设计书 §2.1-A/B 全表逐一对照；只读不写）**：notificationTimeOut=0（D4：Config.cs:44 实例默认，:42 死常量 30000 不移植）；isBrowserMonitoring/showNotification=true（Config.cs:46/:50）；lang=en-US（D1 tag 默认）；darkTheme=true（Config.cs:81）；maxParallel=3/timeout=30/segments=8/retry=10/retryDelay=10（既有 15 键面回归）；minVideo=1024（Config.cs:116 1*1024 KB）；folderSel=0（Auto）与 conflict=0（AutoRename）——两枚举 0 值方向相反易拧点，默认同为 0；startAuto/fetchTs/monitorClip/dblClick/shutdown/runCmd/antivirus=false 与 keepAwake=true（Config.cs:110-136 逐键）；proxyType=0（System）/proxyPort=0（D6 平铺默认）；uaPrefix=Mozilla/5.0（Config.cs:52 原串前 12 字符）；userSelFolder=0（空串串长）；credCount=0（空表）。分支映射：任一键值≠默认 → FAIL 分流 business-code（Config init 读链/默认常量回归；若上轮 S3/走查残留→先核对上轮 restored 行，必要时重装应用复位）。",
+      "keys": {
+        "notificationTimeOut": "0",
+        "isBrowserMonitoring": "true",
+        "showNotification": "true",
+        "lang": "en-US",
+        "darkTheme": "true",
+        "maxParallel": "3",
+        "timeout": "30",
+        "segments": "8",
+        "retry": "10",
+        "retryDelay": "10",
+        "minVideo": "1024",
+        "folderSel": "0",
+        "conflict": "0",
+        "startAuto": "false",
+        "fetchTs": "false",
+        "monitorClip": "false",
+        "dblClick": "false",
+        "shutdown": "false",
+        "keepAwake": "true",
+        "runCmd": "false",
+        "antivirus": "false",
+        "proxyType": "0",
+        "proxyPort": "0",
+        "uaPrefix": "Mozilla/5.0",
+        "userSelFolder": "0",
+        "credCount": "0"
+      }
+    },
+    {
+      "step": "S2",
+      "expect": "videoExts=15 fileExts=23 blockedHosts=3 blockedHost0=update.microsoft.com blockedHost2=thwawte.com categories=5 catVideosExts=13 catDocsExts=7 recentFolders=0 videoFirst=MP4 videoLast=MPD",
+      "note": "**JSON 集合键读回锚（解析门跑通+默认 JSON 串保真）**：videoExts=15（Config.cs:56-62 逐串）/fileExts=23（:64-70）/blockedHosts=3（:72-77）；blockedHost0=update.microsoft.com 与 blockedHost2=thwawte.com——**源拼写 thwawte 保真锚**（不纠正）；categories=5（DEFAULT_CATEGORIES）；catVideosExts=13/catDocsExts=7（CategoryAlgo 逐串互证）；recentFolders=0（空表）；videoFirst=MP4/videoLast=MPD（声明序首尾）。分支映射：计数不符 → FAIL 分流 business-code（默认 JSON 常量/serializeStringList/parseStringListOr 门）；thwawte 缺失或被改成 thawte → FAIL 分流 business-code（保真回归）；categories 解析门失败回默认也会得 5——用 catW=6（S3 写入+读回）交叉证明解析门真实可用而非恒回退。",
+      "keys": {
+        "videoExts": "15",
+        "fileExts": "23",
+        "blockedHosts": "3",
+        "blockedHost0": "update.microsoft.com",
+        "blockedHost2": "thwawte.com",
+        "categories": "5",
+        "catVideosExts": "13",
+        "catDocsExts": "7",
+        "recentFolders": "0",
+        "videoFirst": "MP4",
+        "videoLast": "MPD"
+      }
+    },
+    {
+      "step": "S3",
+      "expect": "timeoutW=120 timeoutR=120 timeoutRestored=30 segmentsW=16 segmentsR=16 segmentsRestored=8 minVideoW=2048 minVideoR=2048 minVideoRestored=1024 proxyW=2 proxyR=2 proxyHostR=10.0.0.1 proxyPortR=8080 proxyRestored=0 conflictW=1 conflictR=1 conflictRestored=0 catW=6 catR=6 catParseDedup=2 catRestored=5 credW=1 credR=1 credRestored=0",
+      "note": "**写回-读回-finally 恢复闭环锚（全部写操作 try/finally 恢复基线）**：三标量写读一致（120/16/2048）且 restored 回基线（30/8/1024）；proxyW=proxyR=2（Custom）+proxyHostR=10.0.0.1+proxyPortR=8080（setProxyInfo 平铺 5 键整块拆写）+proxyRestored=0；conflictW=conflictR=1（Overwrite 落库值）+conflictRestored=0；catW=catR=6（默认 5+自定义 1——JSON 单键序列化/解析门往返证明）+catRestored=5；catParseDedup=2（'.MP4,.MP4,.MKV' 经 parseCategoryTypes 去重保序——**运行时去重锚**，与 [A] 单测 16/20 条互证）；credW=credR=1+credRestored=0。分支映射：任一 W≠R → FAIL 分流 business-code（对应 setter/getter 缓存链断）；任一 restored≠基线 → FAIL 分流 business-code（try/finally 恢复链/基线快照）；catW≠6 或 catR≠6 → FAIL 分流 business-code（serializeCategories/parseCategoriesOr 往返）；catParseDedup≠2 → FAIL 分流 business-code（parseCategoryTypes 去重回归）。",
+      "keys": {
+        "timeoutW": "120",
+        "timeoutR": "120",
+        "timeoutRestored": "30",
+        "segmentsW": "16",
+        "segmentsR": "16",
+        "segmentsRestored": "8",
+        "minVideoW": "2048",
+        "minVideoR": "2048",
+        "minVideoRestored": "1024",
+        "proxyW": "2",
+        "proxyR": "2",
+        "proxyHostR": "10.0.0.1",
+        "proxyPortR": "8080",
+        "proxyRestored": "0",
+        "conflictW": "1",
+        "conflictR": "1",
+        "conflictRestored": "0",
+        "catW": "6",
+        "catR": "6",
+        "catParseDedup": "2",
+        "catRestored": "5",
+        "credW": "1",
+        "credR": "1",
+        "credRestored": "0"
+      }
+    },
+    {
+      "step": "S4",
+      "expect": "langBefore=en-US langSet=zh-Hans langReadback=zh-Hans langRestored=en-US langAfterReadback=en-US themeApply1=light themeApply2=notset themeKeyBaseline=true",
+      "note": "**语言+主题应用观测锚（写操作 try/finally 恢复基线；readback 为系统层事实，UI 随切在 S5 项 31 判）**：langSet=zh-Hans（setAppPreferredLanguage 调用事实）且 langReadback=zh-Hans（getAppPreferredLanguage 系统层读回）；langRestored=en-US（恢复动作=langBefore 值）；langAfterReadback=en-US（恢复后系统层读回）。**环境敏感项（observe-both）**：langBefore='default' 时 langAfterReadback=跟随系统的系统语言（如 zh-CN）——合法观测非缺陷，判定对照 langBefore；langRestored 仅记录恢复写入值。themeApply1=light（setColorMode(LIGHT) 应用事实）+themeApply2=notset（按 themeKeyBaseline=true 映射回 NOT_SET；基线 false 时为 light）+themeKeyBaseline=true（allowSystemDarkTheme 默认）。分支映射：langReadback≠zh-Hans → FAIL 分流 business-code（i18n 调用链/异常吞没）；themeApply1/2=err<code> → FAIL 分流 business-code（ApplicationContext.setColorMode 调用面）；langAfterReadback≠langBefore 且 langBefore≠'default' → FAIL 分流 business-code（恢复链）。",
+      "keys": {
+        "langBefore": "en-US",
+        "langSet": "zh-Hans",
+        "langReadback": "zh-Hans",
+        "langRestored": "en-US",
+        "langAfterReadback": "en-US|<langBefore=default 时系统语言, observe-both>",
+        "themeApply1": "light",
+        "themeApply2": "notset|light(themeKeyBaseline=false 时)",
+        "themeKeyBaseline": "true"
+      }
+    },
+    {
+      "step": "S5",
+      "expect": "checked=<0..31> total=31 unchecked=<1 基项号'/'串或 none>",
+      "note": "**人工走查清单锚（31 项=设计书 §6 S5 清单；主会话内为占位发射，验收锚=末次 runId 的 S5 单步会话）**：全绿目标 checked=31 total=31 unchecked=none。清单覆盖：监控页 6 项（①三列表原文回显含 thwawte ②三默认钮 ③改扩展保存闭环 ④9 档 ⑤三 Toggle ⑥浏览器引导区不渲染 D7）+常规页 13 项（⑦~⑲：六 Toggle/两枚举方向/两目录/并发 1..50/双击两项/分类默认 5/新增校验三弹/新增成功/编辑保留 Name/删除按选中/恢复默认）+网络页 5 项（⑳~㉔：三 Select/限速三件套三规则/代理三档仅 Manual 启用+整块写回）+凭据页 3 项（㉕增改删/㉖空 Host/㉗空 User 校验链）+高级页 2 项（㉘UA 回显+Reset/㉙降级五组不渲染）+全局 2 项（㉚保存闭环+取消零写入/㉛语言即时切换）。分支映射：unchecked 非空 → 按项号分流（项号→PROBE 手册 §5 对照表→设计书 §6/§4 差异锚）；**项 31 界面未变中文且 S4 langReadback=zh-Hans → CONTINGENCY（observe-both）**：setAppPreferredLanguage('zh-Hans') 未命中 resources/zh_CN 限定词——退化路径=资源目录改名 zh（语言级限定词）后重验，登记不判 FAIL。",
+      "keys": {
+        "checked": "<0..31，单步会话全绿目标=31>",
+        "total": "31",
+        "unchecked": "<索引'/'串或 none>"
+      }
+    },
+    {
+      "step": "SUMMARY",
+      "expect": "[SUMMARY] S1=<关键值>|S2=<关键值>|S3=<关键值>|S4=<关键值>|S5=<关键值>",
+      "note": "恰 5 段（各段含关键键：S1=notificationTimeOut、S2=videoExts、S3=timeoutRestored、S4=langReadback、S5=checked）；环形缓冲兜底锚；单行 <1500B（超长时 ProbeKit 两级降级只留各段首 kv——格式仍合法）。"
+    },
+    {
+      "step": "END",
+      "expect": "ok=true steps=<主会话5|单步会话1> elapsedMs=<N>>=0",
+      "note": "ok=true 表示本次会话无脚手架级异常（步骤级 catch 不置 false）；steps 与步骤行数互证（主会话 steps=5 / S5 单步 steps=1）；ok=false→分流 probe-code。BEGIN/END 按 runId 配对无孤儿（两段会话独立 runId）。"
+    }
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "unitId": "P3-U2",
+  "slug": "u3-2-speed-limit-retry-scheduler",
+  "sessions": "单会话模型：填测试源后点'运行全部'自动跑 S1→S4（四步全 autoRun，无人工设备侧中断点；S3 含 60~120s 分钟边界等待，总时长 ≈4 分钟），恰 7 行 BEGIN+S1+S2+S3+S4+SUMMARY+END，steps=4。全局判据：每步骤恰一行，行格式命中 FORMAT 正则 ^\\[XDM_PROBE\\]\\[([A-Z0-9-]+)\\]\\[([A-Za-z0-9-]+)\\]\\s(.+)$；标记行不含通过/失败判定词；单行 <1500B。环境前提：主机侧 node P1-U2-download-server.js 已启动（零改动复用——/big.bin=S2 限速步全速源（Range 206 区间流）、/slow.bin?ms=2500=S3 定时窗长活源（64 块×2.5s≈160s>边界最晚 120s），ms 由探针 URL 参数携带）；设备内测试源填主机局域网 IP（禁 127.0.0.1）；网络需快于 1024KB/s（局域网/真机 WiFi 满足）；避开午夜 ±2min（23:58~00:02 目标分钟跨日 dayBit 失配→env）；探针会话内不切页（manager.init 后到者接管——中途切回 Index 会把事件袋换走，S3 回声断流）。确定性论证（§6 设计书）：S2 单分段——maxSegments=1 时 PieceGrabber COLD-F1 分支（records.size>=maxSegments）对 4MiB 可续传源直派单片闭窗，activeSegmentMax=1 必然；4096KB/1024KB/s≈4s，限速数学时限流（D3 双形态下聚合网络速率均收敛 share=1024）→ avgRateKBs 落 [716.8,1331.2]（±30%）；burstReopenCount=0（4MiB<8MiB 水位必不触达）；S3 边界必然命中——Scheduler armed 后节拍 t0+60k，每 60s 一拍、目标分钟宽 60s 恰一拍落入（drift 两拍内可忽略）；slow.bin?ms=2500 单片 ≈160s>边界最晚 120s，live 必在界内；end 边界 stopAll 两趟（排队先行清退、live 停止——回声补位对空队列 no-op）+ stopOne/回声全同步链路；resumedEcho=0 由 start==end + end-先判（Scheduler.cs:58-63 次序）双保证。重跑残留注记：manager 双集合纯内存，上轮残留经 S1 liveBaseline/queuedBaseline 观测分流 UNVERIFIED（重启即清空）；DB 行每轮 +4（probe-p3u2-<runId>-* 主键不冲突，另 S2 引擎直驱完成不落 completed——行留 in-progress，S3 stopAll 对其幂等 no-op），与既有探针同口径不清理。",
+  "steps": [
+    {
+      "step": "BEGIN",
+      "expect": "runId=<非空HHmmss> filesDir=<非空沙箱files路径>",
+      "note": "会话开始标记，与 END 按 runId 配对（单会话独立 runId）。探针页 autoStart=false——本行出现即'运行全部'已点击。"
+    },
+    {
+      "step": "S1",
+      "expect": "sourceUrl=<base>/big.bin limitKBps=1024 maxSegments=1 maxParallel=<n> liveBaseline=0 queuedBaseline=0 sourceStatus=206 chunks=1 scheduleEnabledBefore=false speedBefore=0",
+      "note": "参数装配+源预检（探针自建 requestInStream + Range: bytes=0-0，不走引擎/业务栈——ProbeQueue S1 同构）。**限速装配锚**：limitKBps=1024+maxSegments=1 是 setSpeedLimit(true,1024)/setMaxSegments(1) 生效回显（Config 第 8/9 键写入链与 D1 单段全额等价点——share=perWorkerLimitKBps(1024,1)=1024）；maxParallel 为快照原值（默认 3，非判定锚——S4 恢复对照）；liveBaseline=0+queuedBaseline=0 是单例干净基线锚（非零→UNVERIFIED 分流：上轮残留，杀进程重启重跑）；sourceStatus=206 是测试源可达+Range 能力锚（S2/S3 判定前提）；chunks=1（bytes=0-0 单字节体）；scheduleEnabledBefore/speedBefore=S1 前原值（默认 false/0；非默认→上轮残留 preferences，S4 恢复后消失，不判定）。分支映射：sourceStatus≠206 或 errCode/errMessage（2300028 超时/2300007 拒连）→ FAIL 分流 env（服务器未启动/地址错/防火墙）。"
+    },
+    {
+      "step": "S2",
+      "expect": "bytes=4194304 elapsedMs=<N> avgRateKBs=<N.n:716.8<=x<=1331.2> instantMinKBs=<N> instantMaxKBs=<N> activeSegmentMax=1 sleepCount=<N>>=1 sleepTotalMs=<N> peakQueuedBytes=<N> burstReopenCount=0 finished=true",
+      "note": "限速速率区间观测（引擎直驱：new Downloader+确定性 id probe-p3u2-<runId>-1 → store.add → dl.start() → 轮询 onFinished（60s 超时）→ dl.throttleStats()）。**限速实测锚（本单元核心验收之一）**：bytes=4194304（big.bin 定长 4MiB 完成回显）；avgRateKBs∈[716.8,1331.2]（4096KB/elapsed 落 1024±30%——SpeedLimiter.cs:46-82 数学逐字时限流：局域网全速源超速→computeSleep 睡眠补偿，D3 双形态（纯睡眠补偿/水位断流 burst-chasing）下聚合网络速率均收敛 share）；activeSegmentMax=1（maxSegments=1 时 COLD-F1 对可续传源直派单片闭窗——确定性论证①）；burstReopenCount=0（4MiB<8388608 水位必不触达）；finished=true（onStarted→onProgress→onFinished 完成链走通——限速关闭默认态外的引擎直驱零回归佐证）；sleepCount>=1（1024KB/s 限额对局域网全速源必发生超速睡眠——限速真正执行的最低证据）；sleepTotalMs/instantMinKBs/instantMaxKBs/peakQueuedBytes 为事实项不判定上下界：peakQueuedBytes≈0=平台有原生背压（纯睡眠补偿形态=源码语义）；接近 4194304=无背压走 burst-chasing（断流排空形态）——两者均合法不判 FAIL（D3 开放问题，跑完回写设计书）。分支映射：avgRateKBs<716.8 且 sleepCount=0 → env（网络慢于限额，换更快网络或调低 LIMIT_KBPS 重跑）；avgRateKBs>1331.2 且 sleepTotalMs=0 → FAIL 分流 business-code（限速未生效——查 dispatchPiece share 注入/SpeedLimiter isEnabled）；activeSegmentMax≠1 → FAIL 分流 business-code（单分段口径破坏）；burstReopenCount≠0 → FAIL 分流 business-code（水位门误触——查 8388608 内联字面量与泵消费速率）；finished=false（超时）→ FAIL 分流 business-code（引擎直驱完成链断——查 hilog PieceScheduler）。"
+    },
+    {
+      "step": "S3",
+      "expect": "targetMinute=<HH:MM> dayBit=<N> submitted=3 liveBefore=1 queuedBefore=2 liveAfter=0 queuedAfter=0 pausedEcho=1 queuedCancelledEcho=2 resumedEcho=0 tickCountBefore=<N> tickCountAfter=<N>>tickCountBefore elapsedMs=<N>",
+      "note": "定时窗停止观测（setMaxParallelDownloads(1) → 目标分钟=当前+2 且 start==end（end 先判防 start 误触，§0-9）→ setSchedule(true,target,target,今日位) → 提交 3 个 slow.bin?ms=2500（1 live+2 queued）→ Scheduler stop+start 重定相位 → 轮询 live/queued 归零（210s 超时））。**定时窗停止锚（本单元核心验收之二，对照 StopDownloads :347-380 双分支）**：liveBefore=1+queuedBefore=2（maxParallel=1 门即时集合）；liveAfter=0+queuedAfter=0（end 边界全停——live 整停+排队清退）；pausedEcho=1（live 的 onPaused 回声恰一次——Scheduler stopAll 两趟次序：排队先行清退（摘除不补位）、live 后停（回声补位对空队列 no-op）——防止回声补位起跑待停项的翻转）；queuedCancelledEcho=2（排队清退 hooks 回声恰两次）；**resumedEcho=0（start 分支未触达佐证——start==end 且 Scheduler.cs:58-63 end 先判先 return 的次序保真双保证）**；tickCountAfter>tickCountBefore（定时器活性——重定相位后至少一拍落入目标分钟，确定性论证②）；targetMinute/dayBit/elapsedMs 为观测值（elapsedMs≈120000-130000 量级：边界最晚 120s+排空）。分支映射：超时且 tickCountAfter==tickCountBefore → FAIL 分流 business-code（定时器死——查 Scheduler.start/EntryAbility 启动链）；超时且 tickCountAfter>tickCountBefore → FAIL 分流 business-code（边界数学/位匹配错——查 ScheduleAlgo 与 Config 六键读回；纯函数面已由 13 条单测锁定）；23:58~00:02 窗口运行且超时 → env（午夜跨界 dayBit 失配——避开午夜 ±2min 重跑）；liveBefore≠1 或 queuedBefore≠2 → FAIL 分流 business-code（maxParallel=1 门判定破坏）；resumedEcho≠0 → FAIL 分流 business-code（start 分支误触——查 scheduledBoundary end-先判次序）；pausedEcho≠1 或 queuedCancelledEcho≠2 → FAIL 分流 business-code（stopAll 两趟次序/回声链回归）。"
+    },
+    {
+      "step": "S4",
+      "expect": "restoredLimit=<N=S1 speedBefore> restoredLimitEnabled=<b=S1 scheduleEnabledBefore 对应原值> restoredMaxSegments=<N=S1 快照> restoredMaxParallel=<N=S1 maxParallel> restoredScheduleEnabled=<b=S1 快照> schedulerRunning=true",
+      "note": "环境恢复（S1 快照回写 setSpeedLimit/setMaxSegments/setMaxParallelDownloads/setSchedule + Scheduler.getInstance().start() 幂等保运行 + 读回校验）。**恢复锚**：默认态 restoredLimit=0+restoredLimitEnabled=false+restoredMaxSegments=8+restoredMaxParallel=3+restoredScheduleEnabled=false（六键回写读回与 S1 快照一致——恢复失败→preferences 写链回归）；schedulerRunning=true（生产态常驻——S3 重定相位后 start() 幂等保持运行，D9）。默认态恢复=限速关闭零回归保证的终态佐证（enableSpeedLimit=false 时 worker 走 U2.1 原直写路径）。分支映射：restored* 与 S1 快照不符 → FAIL 分流 business-code（Config 组合 setter 写入链回归）；schedulerRunning=false → FAIL 分流 business-code（start() 幂等性破坏）。"
+    },
+    {
+      "step": "SUMMARY",
+      "expect": "恰 4 段（S1..S4，各段含关键键：S1=limitKBps,sourceStatus；S2=avgRateKBs,activeSegmentMax,burstReopenCount；S3=liveAfter,pausedEcho,resumedEcho；S4=restoredLimit,schedulerRunning）",
+      "note": "end(ok) 聚合单行（段间 |、段内 ,，值内 | 已替换 /），环形缓冲被冲掉时的兜底锚，与步骤行互证；单行 <1500B 由 ProbeKit 两级降级保证。"
+    },
+    {
+      "step": "END",
+      "expect": "ok=true steps=4 elapsedMs=<N>>=0",
+      "note": "ok=true 表示本次会话无脚手架级异常（步骤级 catch 不置 false）；steps=4 与步骤行数互证；ok=false→分流 probe-code。BEGIN/END 按 runId 配对无孤儿。"
+    }
+  ]
+}

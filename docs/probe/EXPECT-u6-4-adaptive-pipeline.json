@@ -1,0 +1,66 @@
+{
+  "unitId": "P6-U5",
+  "executionStatus": "device-run-2026-10-18",
+  "common": "Each S1-S6 requires cleanupComplete=true, an exported detailFile, no err/errCode, and matching details/short-line facts. END alone is not acceptance.",
+  "steps": [
+    {
+      "step": "BEGIN",
+      "expect": "runId=<HHmmss> filesDir=<sandbox>",
+      "note": "Keep one complete run and its device, API, ABI and HAP fingerprint. Each step owns an independent UUID directory."
+    },
+    {
+      "step": "S1",
+      "expect": "a0RequestStart=0 a0RequestEnd=65535 a1RequestStart=65536 a1RequestEnd=131071 a0Kind=settled a1Kind=settled a0Outcome=complete a1Outcome=complete a0HeadTrusted=true a1HeadTrusted=true a0Received=65536 a1Received=65536 a0Written=65536 a1Written=65536 a0Eof=true a1Eof=true a0FetchSettled=true a1FetchSettled=true a0ApiClosed=true a1ApiClosed=true quiesced=allPartsVerified readyForAssembly=true generation=1 parts=2 p0Bytes=65536 p1Bytes=65536 p0Complete=true p1Complete=true gatePending=0",
+      "hashes": {
+        "p0Sha256": "4b640d85ab3ba30fd02c9fc9db4a8928f416322ad27022ea58a65aaee68a4df2",
+        "p1Sha256": "fe89f108b4028dc360cbe69ce0ccbe4d9bc8af0123f731304b77327fd495a1f6"
+      },
+      "note": "aNError must be empty; aNQueueHigh <= 65536. The server must record two corresponding 206 responses. Request-window facts are not response headers. Record headSource and detachedFetch as observed."
+    },
+    {
+      "step": "S2",
+      "expect": "a0RequestStart=0 a0RequestEnd=-1 elapsedMs>60000 timerFired=true sampleAt60=true attemptPendingAt60=true a0Kind=settled a0Outcome=complete a0HeadTrusted=true a0Received=524288 a0Written=524288 a0Eof=true a0FetchSettled=true a0ApiClosed=true a0QueueHigh<=1048576 quiesced=allPartsVerified readyForAssembly=true generation=1 parts=1 p0Bytes=524288 p0Complete=true gatePending=0",
+      "hashes": {
+        "p0Sha256": "61d1d9c5745bdaa4fab39240651bc242a5186b15393fd475082fcf6e84f400ab"
+      },
+      "note": "【2026-10-18 真机修订】cacheSize 暂停在真机上滞后生效：SDK 越过 64KiB 阈值继续写入至数百 KiB（实测峰值 485022），队列满即中止传输并丢失在途字节。物理容量已调为 1MiB（ADAPTIVE_RCP_QUEUE_CAPACITY），上界按容量判；暂停阈值仍 64KiB。原注：Allow about two minutes with 4 KiB/s throttle and 2-second demand-idle timeout. a0Error must be empty. The server records one 200. attemptPendingAt60 does not claim fetch-Promise status at 60 seconds."
+    },
+    {
+      "step": "S3",
+      "expect": "timerFired=true a0Kind=settled a0Outcome=stopped a0Eof=false a0ApiClosed=true readyForAssembly=false generation=1 parts=1 p0Complete=false 0<=p0Bytes<524288 gatePending=0",
+      "note": "Record actual elapsed, received, written, head, fetch and detached facts. Prefix length is timing-dependent; if nonzero, verify its exported file against pattern i%251 for exactly p0Bytes. Never infer EOF or complete from API close. A timer that did not fire or unexpected early completion is a contradictory observation."
+    },
+    {
+      "step": "S4",
+      "expect": "asmStatus=success asmBytes=6 asmExtension=.ts asmOutput=<owned-name> asmRetained=1 asmClosed=true asmUncertain=false asmCleanup=true asmMediaStarted=false asmMediaSettled=false inputsUnchanged=true slotsUnchanged=true",
+      "hashes": {
+        "outputSha256": "bef57ec7f53a6d40beb640a780a639c83bc29ac8a9816f1fc6c5c6dcd93c4721"
+      },
+      "note": "asmError is empty. Exported output is exactly abcdef; original inputs remain abcTAIL and defMORE. Check both state slots and retained filename."
+    },
+    {
+      "step": "S5",
+      "expect": "asmStatus=success asmBytes>0 asmExtension=.mp4|.mkv asmOutput=<owned-name> asmRetained=3 asmClosed=true asmUncertain=false asmCleanup=true asmMediaStarted=true asmMediaSettled=true outputFile=<owned-path> outputSha256=<actual-sha256>",
+      "hashes": {
+        "videoTrackSha256": "a9031eb264daacdb12b8b5f09d28cddedb41e94c59bce3bc53d30a29cfcc2254",
+        "audioTrackSha256": "bc07711e61565df03d063be18af19e2fc1ae23f36ea2845a41f21a1393ddb138"
+      },
+      "note": "asmError is empty. Export actual retained tracks and output; verify ordinary-file size/hash, ffprobe video/audio streams and full decode or device playback separately. No host-generated output fingerprint substitutes for this target file."
+    },
+    {
+      "step": "S6",
+      "expect": "missingStatus=ioError missingOutput=<empty> missingClosed=true missingUncertain=false missingCleanup=true missingMediaStarted=false missingKeptUnchanged=true missingSlotsUnchanged=true cancelStatus=stopped cancelStop=true cancelOutput=<empty> cancelClosed=true cancelUncertain=false cancelCleanup=true cancelMediaStarted=false cancelInputsUnchanged=true",
+      "note": "Record actual fixed error codes and retained names. The missing-file fixture and callback-cancelled fixture have different download IDs. Missing input must fail explicitly, without altering other inputs or old slots."
+    },
+    {
+      "step": "SUMMARY",
+      "expect": "S1/S2/S3/S4/S5/S6 agree with their step lines",
+      "note": "Missing detail files, resource uncertainty or absent Native decode observations remain unverified."
+    },
+    {
+      "step": "END",
+      "expect": "ok=true steps=6 elapsedMs>=0",
+      "note": "This is scaffold completion only. No target run has been performed; all step observations require independent adjudication."
+    }
+  ]
+}

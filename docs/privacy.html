@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>XDM下载管理器 隐私政策</title>
+<style>
+  body { font-family: -apple-system, "HarmonyOS Sans", "PingFang SC", "Microsoft YaHei", sans-serif; max-width: 760px; margin: 0 auto; padding: 24px 16px; line-height: 1.7; color: #222; background: #fff; }
+  h1 { font-size: 24px; } h2 { font-size: 18px; margin-top: 28px; }
+  td, th { border: 1px solid #ccc; padding: 6px 10px; vertical-align: top; } table { border-collapse: collapse; width: 100%; }
+  .muted { color: #666; font-size: 14px; }
+</style>
+</head>
+<body>
+<h1>XDM下载管理器 隐私政策</h1>
+<p class="muted">生效日期：2026 年 11 月 19 日　适用版本：1.0.0 及以后版本</p>
+
+<p>XDM下载管理器（以下简称"本应用"）是一款开源下载工具。我们非常重视你的隐私。本政策说明本应用如何处理与你有关的信息。</p>
+
+<h2>一、我们不收集个人信息</h2>
+<p>本应用没有账号体系，不集成任何第三方统计、广告或推送 SDK，不会收集、上传或出售你的任何个人信息。</p>
+
+<h2>二、本应用在本机处理的数据</h2>
+<ul>
+  <li><b>下载记录与设置</b>：下载地址、文件名、保存位置、进度及应用设置保存在应用自己的沙箱中，仅存于本机，卸载应用即删除。</li>
+  <li><b>下载的文件</b>：下载过程中的临时分段与下载结果保存在应用沙箱内；如果你通过系统文件夹选择器指定了保存目录，下载完成后文件会复制到该目录。本应用不会读写你未授权的其他目录。</li>
+  <li><b>网络请求</b>：本应用只访问你主动提供（或经浏览器扩展交给本应用）的下载地址；为完成下载，会按需携带该下载请求原有的 Referer、Cookie 等请求头，这些信息只发送给对应的下载服务器。</li>
+  <li><b>本机端口</b>：运行时在本机回环地址 127.0.0.1:8597 监听，仅用于与同一台电脑上的浏览器扩展通信，不对外网开放。</li>
+</ul>
+
+<h2>三、权限说明</h2>
+<table>
+  <tr><th>权限</th><th>用途</th></tr>
+  <tr><td>网络（INTERNET）</td><td>下载你指定的文件。</td></tr>
+  <tr><td>读取剪贴板（READ_PASTEBOARD）</td><td>你复制下载链接后，在新建下载时自动填入。剪贴板内容不保存、不上传。你可以拒绝，拒绝后只是不再自动识别，手动粘贴不受影响。</td></tr>
+  <tr><td>后台持续运行（KEEP_BACKGROUND_RUNNING）</td><td>有下载任务进行时在后台继续下载，任务完成即释放，通知栏可见。</td></tr>
+  <tr><td>退出前处理（PREPARE_APP_TERMINATE）</td><td>有下载进行时关闭窗口，先保存进度，避免下载丢失。</td></tr>
+  <tr><td>通知</td><td>提示下载进度与完成情况，可在系统设置中关闭。</td></tr>
+</table>
+
+<h2>四、信息共享</h2>
+<p>除上文所述、为完成下载而向你指定的下载服务器发送请求外，本应用不会与任何第三方共享信息。</p>
+
+<h2>五、未成年人</h2>
+<p>本应用不面向儿童收集任何信息。</p>
+
+<h2>六、开源</h2>
+<p>本应用基于开源项目 Xtreme Download Manager（作者 subhra74）修改开发，遵循 GNU 通用公共许可证第 2 版（GPL-2.0）发布，完整源代码：<a href="https://gitcode.com/Red_Salt/XdmHarmony">https://gitcode.com/Red_Salt/XdmHarmony</a>。你可以自行审阅上述数据处理方式。</p>
+
+<h2>七、政策更新与联系我们</h2>
+<p>本政策如有更新，将在本页面公布并更新生效日期。如有疑问，请在源代码仓库提交 Issue 与我们联系。</p>
+</body>
+</html>

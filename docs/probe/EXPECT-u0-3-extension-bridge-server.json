@@ -1,0 +1,40 @@
+{
+  "unitId": "P0-U3",
+  "steps": [
+    {
+      "step": "BEGIN",
+      "expect": "runId=<非空HHmmss> filesDir=<非空沙箱files路径>",
+      "note": "会话开始标记，与 END 按 runId 配对（多轮运行取最后一个 runId）。autoStart=true，进入 P0-U3 探针卡片即自动产生。全局判据：每步骤恰一行，行格式命中 FORMAT 正则 ^\\[XDM_PROBE\\]\\[([A-Z0-9-]+)\\]\\[([A-Za-z0-9-]+)\\]\\s(.+)$；标记行不含通过/失败判定词。S3 手动步骤的迷你会话会产生额外 BEGIN/END 对（ProbePage.runSingle 既有编排），verify 按 runId 配对不视为格式错误。"
+    },
+    {
+      "step": "S1",
+      "expect": "alreadyStarted=true boundPort=8597 portMismatch=false connections>=0 requests>=0",
+      "note": "服务启动+端口监听观测（getStats 前快照 → start() 幂等 memoized → 后快照）。alreadyStarted=true 是 EntryAbility 启动接线的运行时证据（应用经 devecocli run 拉起即已 start，探针复用同一 Promise）；boundPort 来自 getLocalAddress() 校验（listen 成功≠拿到 8597，bind 失败系统随机分配端口）；portMismatch=(boundPort≠8597) 谓词。分支映射：portMismatch=true→UNVERIFIED，按手册 §6 查占用重跑（netstat -ano | findstr 8597），无 MSG_ALREADY_RUNNING UI 属设计拍板不判 FAIL；alreadyStarted=false→EntryAbility 接线缺失，分流 business-code。"
+    },
+    {
+      "step": "S2",
+      "expect": "status=200 contentType=application/json cacheControl=max-age=0/no-cache/must-revalidate contentLength=<N> bodyBytes=<N> jsonValid=true fieldCount=8 fieldOrder=enabled/fileExts/blockedHosts/requestFileExts/mediaTypes/tabsWatcher/videoList/matchingHosts reuseResponses=2 closeConnClosed=true detailFile=probe-P0-U3-<runId>-s2-response.txt",
+      "note": "应用内自连 GET /sync 应答观测。verify 复算 contentLength==bodyBytes（Content-Length 头与体字节数一致）；jsonValid/fieldCount/fieldOrder 为 parseSyncBody 对应答体的直接观测（JSON.parse 成功性+Object.keys 序），fieldCount=8 且 fieldOrder 恰为八字段契约序（IpcHttpMessageProcessor.cs:289-362 写出序）；fieldOrder 与 cacheControl 的分隔符为 '/'——探针值白名单不含逗号（ProbeKit VALUE_BAD），emit 侧 ','→'/'（cacheControl 原值 'max-age=0, no-cache, must-revalidate' 经 ', '→'/' 预转换，R2-F2），原始逗号形在 detail 文件保留可交叉核对；reuseResponses=2 为 keep-alive 同连接两应答计数（busy/pending 串行泵回归观测）；closeConnClosed=true 为 Connection: close 请求后服务端主动关闭观测（应答头恒写 keep-alive 但按请求判定复用的非对称签名，设备侧对表主机 curl -v 签名）。交叉核对：cat <filesDir>/detailFile 应含原始应答头块+体文本。失败形态：errCode/errMessage 键组替代正常键集→2300007 系连接被拒先查应用前台态（env 分流），再查桥是否启动（business-code）。"
+    },
+    {
+      "step": "S3",
+      "expect": "cmd1=hdc fport tcp:18597 tcp:8597 cmd2=curl http://127.0.0.1:18597/sync connections=<N> requests=<N> lastMethod=GET lastPath=/sync",
+      "note": "主机侧 curl 指引（autoRun=false 手动步骤）。cmd1/cmd2 为固定指引命令串。计数口径：主机 curl 前后各点一次\"执行\"，每次产生独立 minisession（BEGIN+S3+END）——判定取主机 curl 执行后的最后一次 S3 行，其 connections/requests 较 S2 结束后的快照增长（主机侧每个 curl 请求 +1 连接 +1 请求；扩展轮询期间每 ~5s 各 +1），lastMethod=GET/lastPath=/sync 为最近一请求观测。主机侧配套判定（手册 §3 命令输出回贴）：curl -i /sync 应答行 HTTP/1.0 200 OK + Content-Type: application/json + Cache-Control: max-age=0, no-cache, must-revalidate + Connection: keep-alive + 合法 JSON（stdout 过 JSON.parse）；八路由逐条 /sync=200 其余七条=404（404 即可达证据）；POST /sync=200；curl -v 应答头 keep-alive 而连接被服务端关闭（非对称签名）。分支映射：计数无增长→env（fport 失败/应用退后台冻结），重执行 fport 后重跑。"
+    },
+    {
+      "step": "S4",
+      "expect": "syncStatus=200 downloadStatus=404 mediaStatus=404 tabUpdateStatus=404 vidStatus=404 clearStatus=404 linkStatus=404 argsStatus=404 querySyncStatus=404 postSyncStatus=200 malformedClosed=true",
+      "note": "八路由 404/错误处理观测（逐路径新连接 Connection: close）。七条业务路由 404＝分发骨架可达证据（连接/应答/HTTP/1.0 404 空体无 Content-Length/断连定界全链路），U6.1 补业务后转 200——非 FAIL；syncStatus=200 与 postSyncStatus=200 证明 /sync 分发不校验 method；querySyncStatus=404 证明 path 精确匹配不剥 query（/sync?x=1 按 unknown path）；malformedClosed=(closed 且无完整头块) 为裸发 GARBAGE 的解析失败断连不回包观测（1:1 原版 HttpServer.cs:56-63 语义）。分支映射：单路由 err<errCode>→该路由连接级失败（不中断循环，连接失败也是错误处理观测事实），2300007 系按 S2 分流；malformedClosed=false→business-code 返修（服务端未断连）；404 路由若收到带 Content-Length 的应答或 HTTP/1.1 状态行→business-code 返修（应答拼装偏离 RequestContext.cs:33-62）。"
+    },
+    {
+      "step": "SUMMARY",
+      "expect": "恰 4 段（S1..S4），各段含关键键：S1=boundPort 或 portMismatch；S2=status 或 jsonValid；S3=lastPath 或 connections；S4=syncStatus 或 malformedClosed",
+      "note": "end(ok) 聚合单行（段间 |、段内 ,，值内 | 已替换 /），环形缓冲被冲掉时的兜底锚，与步骤行互证；单行 <1500B 由 ProbeKit 两级降级保证。S3 迷你会话也会各产生一行 SUMMARY（仅含 S3 段），主判定取 S1/S2/S4 同 runId 的完整聚合行。"
+    },
+    {
+      "step": "END",
+      "expect": "ok=true steps=4 elapsedMs>=0",
+      "note": "ok=true 表示本次会话无脚手架级异常（步骤级 catch 不置 false）；steps=4 与主会话步骤行数互证（S3 迷你会话的 END steps=1 独立配对，不算缺步）；ok=false→分流 probe-code。"
+    }
+  ]
+}

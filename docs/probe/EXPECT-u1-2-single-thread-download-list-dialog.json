@@ -1,0 +1,67 @@
+{
+  "unitId": "P1-U2",
+  "slug": "u1-2-single-thread-download-list-dialog",
+  "sessions": "两段式会话模型：A=填测试源后点'运行全部'自动跑 S1~S8（8 步）；B=杀进程重启后进页点 S9 执行（runSingle 单步会话，steps=1）。EXPECT 逐步骤判定不分执行者，S9 以会话 A 之后至少一次重启为前提。全局判据：每步骤恰一行，行格式命中 FORMAT 正则 ^\\[XDM_PROBE\\]\\[([A-Z0-9-]+)\\]\\[([A-Za-z0-9-]+)\\]\\s(.+)$；标记行不含通过/失败判定词；S9 不得出现在自动会话（分派层跳过，END steps=8）。环境前提：主机侧 node P1-U2-download-server.js 已启动（启动指引见 PROBE 手册 §1），设备内测试源填主机局域网 IP（禁 127.0.0.1）。",
+  "steps": [
+    {
+      "step": "BEGIN",
+      "expect": "runId=<非空HHmmss> filesDir=<非空沙箱files路径>",
+      "note": "会话开始标记，与 END 按 runId 配对（A/B 会话各自配对，verify 按 runId 取对应会话段）。自动会话（A）点'运行全部'产生；S9 单步会话（B）独立 BEGIN。pending 文件目录前缀取本行 filesDir=。"
+    },
+    {
+      "step": "S1",
+      "expect": "sourceUrl=<base>/big.bin status=206 contentLength=4194304 rangeSupported=true chunks=<N>>=1",
+      "note": "测试源 Range 能力预检（探针自建 requestInStream，不走引擎/业务栈）——S5/S6 判定的环境前提。status=206 即续传能力成立（echo 源对 Range: bytes=0- 回 206 非 200，对齐引擎首请求纪律）；contentLength=4194304 与 DOWNLOAD_BYTES 同值锚；rangeSupported=true 是 status==206 的谓词编码。分支映射：rangeSupported=false 或 errCode/errMessage（2300028 超时/2300007 拒连）→ FAIL 分流 env（服务器未启动/地址错/防火墙），S5/S6 无判定意义。"
+    },
+    {
+      "step": "S2",
+      "expect": "requestUrl=<base>/redirect redirectFollowed=true finalStatus=200 headsReceivedCount=<N> locationSeen=<Location值 或 absent> headersAtRedirect=<true/false>",
+      "note": "重定向观测（决策 9 降级 D1 的补偿观测，业务 HttpClient+六默认头直测 /redirect→/final）。redirectFollowed=true（栈自动跟随：finalStatus=200 而非 302）。headersAtRedirect=headersReceivedCount>=2 的谓词编码，是 headersReceive 是否在 3xx 跳点触发的直接观测——**不计业务 PASS/FAIL**：true→openQuestion 1 判定输入（Phase 2 前可恢复决策 9 的 1:1 最终 URL 回写并回写计划）；false→降级维持（d.ts:3607-3760 无最终 URL 字段的既定差异成立）。locationSeen 记首条头 Location 原值或 absent。分支映射：errCode 键组→FAIL 分流 env（源不可达）。"
+    },
+    {
+      "step": "S3",
+      "expect": "recordId=probe-u2-<runId> addOk=true started=true firstRequestStatus=206 totalSize=4194304 resumable=true tempDirCreated=true pieceFileExists=true",
+      "note": "新建+启动链路（newDownloadRecord→覆盖确定性 id=COLD-F1→store.add→Downloader.start→onStarted+首次 onConnected）。firstRequestStatus=206：引擎首请求恒带 Range: bytes=0-（206 即续传能力探测，PieceGrabber.cs:389 AddRange(0)+CreateProbeResult :441 语义）；resumable=true 同源；totalSize=4194304 与 S1 互证；tempDirCreated/pieceFileExists 为引擎接管证据（joinTempDir(Config.tempDir,id) 建目录+分片文件）。分支映射：addOk=false→FAIL 分流 business-code（store 未就绪，查 hilog DownloadStore）；firstRequestStatus=200→引擎 Range 头生成回归 FAIL business-code；started=false 或 totalSize=-1→FAIL 分流 business-code/env（结合 S1）。"
+    },
+    {
+      "step": "S4",
+      "expect": "progressTicks=<N>>=1 lastProgress=<0..100> lastInstantSpeed=<N> lastEta=<N> lastDownloaded=<N>>=262144 dbProgress=<N>>0 recordSynced=true",
+      "note": "进度链三线互证：引擎 >500ms 进度事件（progressTicks，HTTPDownloaderBase.cs:288 门）→ 消费方落库（dbProgress>0，D8 每 >500ms 事件一次写库，对照 Application.cs:323-331）→ @Observed 字段同步（recordSynced）。等待谓词为 AND（progressCount>=1 且 lastDownloaded>=262144）——设计书 §6 表格写'或'系笔误，OR 在快源下 progressTicks=0、慢源下 5 ticks≈整文件使 S5 暂停窗口消失，PROBE 手册 §4 注① 同源（EXPECT 按实现判定）。分支映射：progressTicks=0→FAIL 分流 business-code（进度事件链断裂）；dbProgress=0/-1→FAIL 分流 business-code（落库链路）；recordSynced=false→FAIL 分流 business-code（@Observed 单写者链路）；engineFailed=true errCode 键组→按 S6 表 errCode 分流。"
+    },
+    {
+      "step": "S5",
+      "expect": "onPausedFired=true; when pauseLanded=true: 0<pauseOffset<4194304 pieceCount>=1 ledgerSum=<pauseOffset> ledgerMatchesPause=true filesCoverLedger=true aggregateFileSize>=ledgerSum detailFile=<nonempty filename>; pauseLanded=false => UNVERIFIED pending diagnosis",
+      "note": "Segmented engine: sum getPieceSnapshots.downloaded and compare with onPaused. Each corresponding piece file must cover its reported prefix; a zero-byte unstarted piece may have no file yet. detailFile lists id/offset/length/downloaded/fileSize. Legacy first-file tempFileSize == total pauseOffset was invalid after segmentation. Stale split tails and delayed worker accounting allow fileSize > downloaded. Never advance the ledger from stat. filesCoverLedger=false or ledgerMatchesPause=false => FAIL business-code. Diagnose zero-byte slow streams with errors, elapsed time and server logs instead of classifying them as a fast source. This does not prove a drained pause or byte correctness; S6/S7 and full-output hash verification remain required."
+    },
+    {
+      "step": "S6",
+      "expect": "resumeStatus=206 probeRequestStatus=206 contentRangeStart=<pauseOffset> contentRangeTotal=4194304 requestedOffset=<pauseOffset> startMatches=true totalMatches=true engineResumeConnected=true",
+      "note": "恢复 206 链路核心（验收主线）。resumeStatus=206 为引擎二次 onConnected 状态（续传请求恒 206）；contentRangeStart/contentRangeTotal 来自探针自证请求（业务 HttpClient 带 Range: bytes=<pauseOffset>-，open 后 abort 不消费体）——引擎事件面不携带 Content-Range（PROBE 手册 §4 注②）；startMatches/totalMatches 是 §0-6 三检（206+total==fileSize+start==请求偏移）的可观测对应；engineResumeConnected=true 且无 engineFailed 为引擎自身三检通过的旁证（三检不过→onFailed 终态，S7 出 engineFailed）。分支映射：resumeStatus=200→UNVERIFIED（源不支持 Range，S1 应已拦截 env）；startMatches=false 或 totalMatches=false→FAIL 分流 business-code（Range 头生成/三检判定回归）；engineFailed=true→按 errCode 分流 business-code（5=InvalidResponse/2=NonResumable/4=MaxRetry 连接期反复失败查 env）。"
+    },
+    {
+      "step": "S7",
+      "expect": "finished=true finalSize=4194304 finalFileExists=true tempDirGone=true spotChecks=m0=o/m<x>=o/... 5 点全 o allSpotsMatch=true dbKind=1 dbName=probe-u2-<runId>.bin dbSize=4194304 dbProgress=0 pendingFile=probe-P1-U2-persist.json",
+      "note": "完成收尾+字节抽查+落库。finalSize=4194304（statSync 终值）；tempDirGone=true（renameSync→getUniqueFileName→清 temp 收尾链，AssemblePieces 单分片退化 D10）；spotChecks 为 5 抽查点逐点 m<offset>=o|x（spotOffsetAt 点集 {0,pauseOffset-1,pauseOffset,total/2,total-1}，比对 expectedByteAt 确定性字节）——**allSpotsMatch=true 是 206 续传字节级正确性证据**（若 resume 忽略偏移，pauseOffset 处字节必错位）；dbKind=1/dbSize=4194304 为 markAsFinished 落库读回（D12 单写链）；dbProgress=0 为完成行 R3 强制规则读回（非缺陷）。分支映射：allSpotsMatch=false 或 spotChecks 含 =x→FAIL 分流 business-code（206 续传偏移错位）；tempDirGone=false→FAIL 分流 business-code（清 temp 回归）；finalSize!=4194304→FAIL 分流 business-code（EOF 判定/收尾回归）；dbKind=-1→FAIL 分流 business-code（落库链路）；engineFailed=true→按 errCode 分流。"
+    },
+    {
+      "step": "S8",
+      "expect": "inProgressCount=<N> finishedCount=<N>>=1 finalPathInDb=<targetDir>/<name> fileAtPathExists=true",
+      "note": "列表快照（queryAll/queryFinished 计数+完成行 targetdir/name 拼接路径存在性）——列表数据源就绪观测，UI 渲染走 PROBE 手册 §5 人工走查。finalPathInDb 含冒号/斜杠（探针值白名单内）；fileAtPathExists=true 证 DB 路径与磁盘一致。分支映射：finishedCount=0→FAIL 分流 business-code（分型迁移/落库回归）；fileAtPathExists=false→FAIL 分流 business-code（finalPathInDb 拼接或文件被移）；inProgressCount 含 probe id（probe 行未迁移）→FAIL 分流 business-code。"
+    },
+    {
+      "step": "S9",
+      "expect": "pendingFound=true id=probe-u2-<上次会话runId> rowFound=true kind=1 sizeMatches=true fileStillExists=true；pendingFound=false rowFound=false → UNVERIFIED",
+      "note": "重启历史核对（手动单步会话）——重启持久核心判定：rowFound=true 且 kind=1/sizeMatches（杀进程 force-stop 后 completed/size 列仍在，RelationalStore 自身事务落盘；对照 P1-U1 S9 两段式）；fileStillExists=true 证最终文件跨重启存活。重启后引擎不恢复（U2.2 落续传状态机）——历史行以 Stopped 展示即满足验收。分支映射：pendingFound=false rowFound=false→UNVERIFIED（未跑会话 A 或 pending 被清，先跑 A 再重启跑 B）；pendingFound=true 且 rowFound=false→FAIL 分流 business-code（持久丢失）；sizeMatches=false 或 kind!=1→FAIL 分流 business-code（markAsFinished 落库值或读回映射问题）。"
+    },
+    {
+      "step": "SUMMARY",
+      "expect": "自动会话恰 8 段（S1..S8，各段含关键键：S1=status；S2=redirectFollowed,headersAtRedirect；S3=addOk,firstRequestStatus；S4=progressTicks,dbProgress；S5=pauseLanded,filesCoverLedger,ledgerMatchesPause；S6=resumeStatus,startMatches；S7=allSpotsMatch,dbKind；S8=finishedCount,fileAtPathExists）；S9 单步会话 1 段",
+      "note": "end(ok) 聚合单行（段间 |、段内 ,，值内 | 已替换 /），环形缓冲被冲掉时的兜底锚，与步骤行互证；单行 <1500B 由 ProbeKit 两级降级保证。"
+    },
+    {
+      "step": "END",
+      "expect": "自动会话 ok=true steps=8 elapsedMs>=0；S9 单步会话 ok=true steps=1 elapsedMs>=0",
+      "note": "ok=true 表示本次会话无脚手架级异常（步骤级 catch 不置 false）；steps 与该会话步骤行数互证（自动会话 8=仅 S1~S8，S9 被分派层跳过无标记行）；ok=false→分流 probe-code。会话守卫冒烟（PROBE 手册 §7）：暖启动重建后新 runId 行完整、无旧会话标记行串入、无孤儿 BEGIN/END；自动会话进行中点 S9 被 ProbePage.sessionRunning 守卫忽略。"
+    }
+  ]
+}

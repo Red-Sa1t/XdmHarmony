@@ -1,0 +1,60 @@
+{
+  "unitId": "P6-U2",
+  "steps": [
+    {
+      "step": "BEGIN",
+      "expect": "runId=<非空HHmmss> filesDir=<非空沙箱files路径>",
+      "note": "会话开始标记，与 END 按 runId 配对（多轮运行取最后一个 runId）。autoStart=true，进入 P6-U2 探针卡片即自动产生。全局判据：每步骤恰一行，行格式命中 FORMAT 正则 ^\\[XDM_PROBE\\]\\[([A-Z0-9-]+)\\]\\[([A-Za-z0-9-]+)\\]\\s(.+)$；标记行不含通过/失败判定词。tracker（mediaAdded/mediaUpdated）与 BridgeUiEvents（videoDialog）监听器在组件挂载（BEGIN 前）注册，事件计数从 0 起；BridgeUiEvents 注册面 import 自 BridgeActions（U6.2 收敛 a）。前置态：S1 /clear 只清 tracker 四表不清嗅探态（源 ClearVideoList 同貌），S3/S4 写入的 m3u8Tabs/referersToSkip 被 S5/S6 依赖属预期（设计书 §7 风险表；载荷 tabId 错开避免串扰）。"
+    },
+    {
+      "step": "S1",
+      "expect": "started=true boundPort=8597 clearStatus=200 baseVideoCount=0",
+      "note": "就绪+/clear 清空基线。started/boundPort 来自 BridgeServer.getStats()（EntryAbility 常驻启动的运行时证据；boundPort≠8597→UNVERIFIED 查端口占用）；clearStatus=200 即 /clear 业务成功统一 sync 应答；baseVideoCount=/clear 应答体 videoList 长度（清空后恒 0）。分支映射：clearStatus=err<code>→2300007 系连接被拒先查应用前台态（env 分流）；clearStatus≠200→business-code。"
+    },
+    {
+      "step": "S2",
+      "expect": "mediaStatus=200 secondStatus=200 jsonStatus=200 addedEvents=2 listCount=2 firstTextSuffix=.mp4 secondTextSuffix=.aac secondInfoPrefix=AAC",
+      "note": "/media 分类矩阵三连发：①video/mp4 5MB file=Movie 登记（'Movie.mp4'+'[MP4] 5.0M'）；②audio/aac 2MB file=Tone 登记（'Tone.aac'+'[AAC] 2.0M'——ext 映射 audio/aac→aac；设计书 §6 示例行 secondTextSuffix=.m4a 为示意，EXPECT 按实现真值 .aac；CL=2097152 而非示例 2048——2048<MinVideoSize*1024 会被 size 门拒，示例行载荷为示意）；③application/json 识别锚不登记（分派链四段独立非互斥：YT JSON 锚后 ④⑤ 仍被评估，extFromMedia miss → return 不登记）。addedEvents=本步 onMediaAdded 增量（③无登记）；listCount=第三次应答体 videoList 长度=2；firstTextSuffix/secondTextSuffix=videoList[0]/[1] text 末 4 字符；secondInfoPrefix=description 首段 '[X]' 括号内 token（'['/']' 不在 emit 值白名单，预剥离）。分支映射：addedEvents=1 且 listCount=1→查② 载荷 CL（size 门 business-code）；listCount=0→business-code（Content-Type 门/ext 映射）。"
+    },
+    {
+      "step": "S3",
+      "expect": "hlsStatus1=200 hlsStatus2=200 beforeCount=2 afterCount=2 tsBlocked=true",
+      "note": "HLS 暂态消除（U6.1 §7-3 的浏览器真流量前服务端验证）。① POST /list.m3u8 ct=application/vnd.apple.mpegurl tabId=200：isHLS 命中 → m3u8Tabs.add('200')+referersToSkip.add(sha1('R1'))（写入点=源 manifest 拉取之前的源序，网络无关即消除暂态）+识别锚 log，无登记（isNormalVideo 门② tabId 拦截+ext 映射 miss）；② 同 tabId POST /seg/001.ts ct=video/mp2t CL=300000：门② m3u8Tabs.has('200') → 拦截，无登记。beforeCount/afterCount=tracker.getTrackedVideos().length 前后值（=2 不变）；tsBlocked=(afterCount===beforeCount) 直接观测谓词。分支映射：afterCount=3→business-code（m3u8Tabs 写入失败——查 registerManifestTab/isHLS 谓词）。"
+    },
+    {
+      "step": "S4",
+      "expect": "seedStatus=200 skipStatus=200 otherStatus=200 beforeCount=2 afterSkipCount=2 afterOtherCount=3",
+      "note": "referer 跳过表（SHA1 键）。① POST /list2.m3u8 tabId=201 Referer=R1：写表（m3u8Tabs.add('201')+referersToSkip.add(sha1('R1'))）；② POST /v/clip.mp4 ct=video/mp4 CL=5242880 Referer=R1 无 tabId：processNormalVideo 的 IsMediaFragment(referer) 命中 sha1 键 → 拦截（afterSkipCount=beforeCount=2）；③ 同 URL Referer=R2：未命中 → 登记（afterOtherCount=3；无 tabId 避开 S3 门②串扰）。分支映射：afterSkipCount=3→business-code（sha1Hex 或 referersToSkip 写入）；afterOtherCount=2→business-code（R2 误拦）。"
+    },
+    {
+      "step": "S5",
+      "expect": "audioStatus=200 videoStatus=200 dualCount=1 audioTextPrefix=MP4_AUDIO dualTextPrefix=1080p listCount=5",
+      "note": "YT-DASH 段配对全量（VideoUrlHelper.cs:409-613）。① POST googlevideo?itag=140&mime=audio%2Fmp4&clen=1000&id=oA ct=audio/mp4 file=YT Video：三过门 → 参数重组 → AddToQueue 入音频队 → HandleDashAudio 先配对前登记单源（file='YT Video.mp4'、displayText='[MP4 AUDIO] 1000B'、contentType='audio/mp4'=唯一非空登记路径 F3 对照面）；② 同 host ?itag=137&mime=video%2Fmp4&clen=2000&id=oA：入视频队 → GetDASHPair 队尾扫描命中 id=oA → CreateDualInfo 登记 yt 表（file='YT Video.mkv'、size=3000、displayText='[1080p] 2.9K'=恒取视频侧 itag）。dualCount=yt 表 file='YT Video.mkv' 计数；audioTextPrefix=去括号 token 内空格→'_'（'MP4 AUDIO'→MP4_AUDIO，白名单预转换）；dualTextPrefix='[1080p]' 括号内 token；listCount=第二次应答 videoList 长度=5（S4 后 3+audio 单源 1+dual 1）。分支映射：dualCount=0→business-code（配对链——查 host/contentType/url 三门与 id 参数解析）；audioTextPrefix 缺失→business-code（HandleDashAudio ext 分支）。"
+    },
+    {
+      "step": "S6",
+      "expect": "normalStatus=200 kvStatus=200 kvTextPrefix=KV_AUDIO kvFileText=Clipmkv vidStatus=200 videoDialogEvents=1",
+      "note": "短路+怪典+对话框事件三连。① POST googlevideo?itag=22&mime=video%2Fmp4&clen=5242880 ct=video/mp4 CL=5242880 file=Regular：isNormalVideoItag(22) 命中区间（4<n<79）→ processYtDashSegment 返 false 落普通门 → 登记 'Regular.mp4'（normalStatus=200 即门语义正确）；② POST ?itag=139&mime=audio%2Fflac&clen=1000 ct=audio/flac file=Clip：ext 分支 mime 无 webm/mp4 → ext='mkv' **缺前导点**（源怪癖 1:1 保留，设计书 §0-3/D13 钉死）→ file='Clipmkv'、displayText='[KV AUDIO] 1000B'（ext.substring(1) 吞掉 K）→ kvTextPrefix=KV_AUDIO、kvFileText=Clipmkv；③ POST /vid{vid:Regular.mp4 条目 id}：tracker.addVideoDownload 命中 video 表+auto=false 默认 → onShowVideoDownloadDialog 事件（videoDialogEvents=本步增量=1；U6.3 前无可见弹窗为预期——事件计数承载走查）。分支映射：kvFileText='Clip.mkv'→business-code（怪癖被误修，§7 风险表）；videoDialogEvents=0→查 Config.startDownloadAutomatically 被改（env）或事件注册（business-code）；normalStatus 后无 Regular.mp4 条目→business-code（itag 短路门）。"
+    },
+    {
+      "step": "S7",
+      "expect": "seededCount=2 kindCount=4 syncStatus=200 listCount=9 walkthroughHint=open-menu-media-capture",
+      "note": "捕获页种子+走查指引。直调 tracker.addHlsVideo（'Stream.ts'、VideoUri、''、'[TS]'）与 addDashVideo（'Video.mkv'、manifest URL、videoSegments 2+audioSegments 1、'[1080p]'）各 1 条——数据形状=U6.4/U7.1 解析产物（设计书 §2.4），供 VideoCapture 页走查（手册 §6）与 hls/dash 组渲染；本单元 HLS/DASH 捕获页显示但不解密（MIGRATION_PLAN §3 降级沿用）。seededCount=调用前后 getTrackedVideos().length 差值；kindCount=四表 kind 去重计数（getTrackedVideos 富投影——/sync 投影 BridgeVideoItem 契约冻结不挂 kind，事件面零破坏红线）；listCount=应答 videoList 长度=9（S6 后基数 7+S2:2 的累计链：S2 后 2→S4 后 3→S5 后 5→S6 后 7→种子后 9；键间自洽判定：listCount=前步基数+seededCount）；walkthroughHint=固定提示串。分支映射：seededCount≠2→probe-code（直调序列）；kindCount<4→business-code（三新写入方分表）。"
+    },
+    {
+      "step": "S8",
+      "expect": "clearStatus=200 finalVideoCount=0 fieldCount=8 fieldOrder=enabled/fileExts/blockedHosts/requestFileExts/mediaTypes/tabsWatcher/videoList/matchingHosts connections=<N> requests=<N> mediaAddedEvents=<N> videoDialogEvents=1",
+      "note": "事件面回归（零破坏）。POST /clear → GET /sync 全量：finalVideoCount=0（四表清空；/clear 不清嗅探态——源 ClearVideoList 同貌，非观测面）；fieldCount=8+fieldOrder 恰八字段契约序（parseSyncBody 观测，逗号经 ','→'/' 预转换；getVideoList//sync SyncFields 字段序契约冻结零改动——分组用新开 getTrackedVideos 不动 /sync 投影）；connections/requests=stats 终快照（与 S1 差值互证：S1~S8 共 17 请求=S1:1+S2:3+S3:2+S4:3+S5:2+S6:3+S7:1+S8:2，每请求各新连接）；mediaAddedEvents=全程 onMediaAdded 计数=9（S2:2+S4:1+S5:2+S6:2+S7:2，与各步 addedEvents/seededCount 互证）；videoDialogEvents=全程 1（仅 S6）。分支映射：fieldCount≠8 或 fieldOrder 偏序→business-code（事件面破坏——最严重偏差，红线）；finalVideoCount≠0→business-code（/clear）。主页面无 jscrash 由抓取侧 devecocli log --crash 空复核。"
+    },
+    {
+      "step": "SUMMARY",
+      "expect": "恰 8 段（S1..S8），各段含关键键：S1=clearStatus 或 baseVideoCount；S2=listCount 或 addedEvents；S3=tsBlocked；S4=afterOtherCount；S5=dualCount 或 dualTextPrefix；S6=videoDialogEvents 或 kvFileText；S7=kindCount 或 seededCount；S8=finalVideoCount 或 fieldOrder",
+      "note": "end(ok) 聚合单行（段间 |、段内 ,，值内 | 已替换 /），环形缓冲被冲掉时的兜底锚，与步骤行互证；单行 <1500B 由 ProbeKit 两级降级保证。"
+    },
+    {
+      "step": "END",
+      "expect": "ok=true steps=8 elapsedMs>=0",
+      "note": "ok=true 表示本次会话无脚手架级异常（步骤级 catch 不置 false，失败路径以 errCode/errMessage 键组呈现于对应步骤行）；steps=8 与步骤行数互证；ok=false→分流 probe-code。双轨判定合并口径（手册 §4/§5）：①Node 用例轨——node docs/probe/P6-U2-sniff-cases.js SUMMARY pass=65 fail=0 退出码 0（本会话已实跑通过，验收『规则链用例表全绿』的 AI 可自验证据）；②探针轨——设备侧 S1~S8 全部命中本表 expect；两轨全绿=本单元 [P] 运行时验收通过；VideoCapture 页人工走查（手册 §6 十项）为 [H] 项单独记录，不阻塞 [P] 判定；真实 HLS 测试流观测（手册 §7）为 U6.1 §8-5 建议项，留 U6.3 扩展栈就绪后执行，非本单元验收面。"
+    }
+  ]
+}

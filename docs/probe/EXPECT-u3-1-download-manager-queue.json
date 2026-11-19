@@ -1,0 +1,42 @@
+{
+  "unitId": "P3-U1",
+  "slug": "u3-1-download-manager-queue",
+  "sessions": "单会话模型：填测试源后点'运行全部'自动跑 S1→S4（四步全 autoRun，无人工设备侧中断点），恰 7 行 BEGIN+S1+S2+S3+S4+SUMMARY+END，steps=4。全局判据：每步骤恰一行，行格式命中 FORMAT 正则 ^\\[XDM_PROBE\\]\\[([A-Z0-9-]+)\\]\\[([A-Za-z0-9-]+)\\]\\s(.+)$；标记行不含通过/失败判定词；单行 <1500B。环境前提：主机侧 node P1-U2-download-server.js 已启动（零改动复用，ms=300/0 由探针 URL 参数携带）；设备内测试源填主机局域网 IP（禁 127.0.0.1）；探针会话内不切页（manager.init 后到者接管——中途切回 Index 会把事件袋换走，S3 序流断流）。确定性论证（§6 设计书）：S2 即时集合确定性——admitNew 门判定与 liveMap/queueMap 变更在单调用栈同步完成、6 个 store.add 按提交序串行、/slow.bin?ms=300 首完成距提交 >2s，故 liveAfterSubmit=3/queuedAfterSubmit=3 必然（健康分支）；S3 补位序确定性——补位 dequeue 在 onFinished 处理器内同步执行，launchResume→resume()→onStarted 同步派发（PieceGrabber.ets:281），事件流严格 finished(k)→started(补位) 交错，swapTargets 依次 4/5/6（FIFO，priority 全 0），swapSources 完成次序不判定（服务端响应次序非确定）；S3 轮询与补位同栈不可穿透——peakLive 观测恒 <=3，下界 >=1 防'全没跑起来'假绿（配合 allFinished=6 锚死）。重跑残留注记：双集合纯内存，上轮残留经 S1 liveBaseline/queuedBaseline 观测分流 UNVERIFIED（重启即清空）；DB 行每轮 +10（probe-p3u1-<runId>-* 主键不冲突），与既有探针同口径不清理。",
+  "steps": [
+    {
+      "step": "BEGIN",
+      "expect": "runId=<非空HHmmss> filesDir=<非空沙箱files路径>",
+      "note": "会话开始标记，与 END 按 runId 配对（单会话独立 runId）。探针页 autoStart=false——本行出现即'运行全部'已点击。"
+    },
+    {
+      "step": "S1",
+      "expect": "sourceUrl=<base>/slow.bin?ms=0 maxParallel=3 liveBaseline=0 queuedBaseline=0 sourceStatus=206 chunks=1",
+      "note": "门参数+基线+源预检（探针自建 requestInStream + Range: bytes=0-0，不走引擎/业务栈——P2-U2 S1 同构）。**maxParallel=3 是 Config 第 7 键门默认值实测锚**（getMaxParallelDownloads，Config.cs:104）；liveBaseline=0+queuedBaseline=0 是单例干净基线锚（非零→UNVERIFIED 分流：上轮残留运行中下载，重启重跑）；sourceStatus=206 是测试源可达+Range 能力锚（S2~S4 判定前提）；chunks=1（bytes=0-0 单字节体）。分支映射：sourceStatus≠206 或 errCode/errMessage（2300028 超时/2300007 拒连）→ FAIL 分流 env（服务器未启动/地址错/防火墙）；maxParallel≠3 → FAIL 分流 business-code（门默认值被改——查 Config init 读取链/DEFAULT 常量/preferences 残留）。"
+    },
+    {
+      "step": "S2",
+      "expect": "submitted=6 submitOrder=1/2/3/4/5/6 liveAfterSubmit=3 queuedAfterSubmit=3 activeAfterSubmit=6 queuedOrder=4/5/6",
+      "note": "快速提交 6 个 /slow.bin?ms=300（确定性 id probe-p3u1-<runId>-<i>，store.add 前覆盖 record.id——COLD-F1 约定；工厂 startWaiting=true，新建 status=Waiting(3) 随 add 落库，对照 AddItemToTop :55）。**上限即时锚（本单元核心验收之一）**：liveAfterSubmit=3（门过 3 个 launchStart——new Downloader+liveMap.set+start() 同步）+ queuedAfterSubmit=3（门挡 3 个 enqueue——门判定 liveMap.size>=max 不含排队数，排队多深都不改变'运行=3'）+ activeAfterSubmit=6（:40 口径 live+queued）+ queuedOrder=4/5/6（FIFO 插入序=queueIds 尾插序，priority 全 0）。submitOrder=1/2/3/4/5/6（await 串行提交序）。分支映射：liveAfterSubmit<3 或 queuedAfterSubmit≠3 → FAIL 分流 business-code（门判定穿透/入队丢失——查 DownloadManager.admitNew 门与 enqueue 幂等门；唯一豁免：设备网络栈握手极慢致首完成击穿首发窗口，此时 S3 peakLive<3 且 allFinished=6，改判 UNVERIFIED 换 ms=600 重跑）；liveAfterSubmit>3 → FAIL 分流 business-code（上限回归——并发>3 直接违反单元验收）。"
+    },
+    {
+      "step": "S3",
+      "expect": "samples=<N>>=2 peakLive=<N:1<=N<=3> queuedPeak=3 swapCount=3 swapTargets=4/5/6 swapSources=<a>/<b>/<c> startedFirstOrder=1/2/3 allFinished=6 failed=0 paused=0 started=6 elapsedMs=<N>",
+      "note": "拥挤窗口轮询+补位序列（POLL_MS=100 轮询 liveCount/queuedCount 直至 live==0&&queued==0，90s 超时）。**并发峰值+补位序锚（本单元核心验收之二）**：peakLive∈[1,3]（上界=并发上限实测；下界防'全没跑起来'假绿——峰值正确性另由 S2 即时集合独立锚定，S3 窗口被首完成击穿见 UNVERIFIED 分支）；queuedPeak=3（S3 起点即满队列）；swapCount=3+swapTargets=4/5/6（onFinished 后紧邻 onStarted 的补位对序列——FIFO 取队首，priority 全 0， GenericOrderedDictionary First() 同构）；swapSources 为观测值不判定次序（服务端响应次序非确定）；startedFirstOrder=1/2/3（首发三元组起跑次序）；allFinished=6 failed=0（全收敛无失败）；paused=0（S2/S3 无停止动作）；started=6（首发 3+补位 3，每下载恰 start 一次）；samples/elapsedMs 为观测值（窗口宽度依赖源速，不判定）。分支映射：peakLive>3 → FAIL 分流 business-code（**并发上限回归，单元验收直接失败**）；swapCount≠3 或 swapTargets≠4/5/6 → FAIL 分流 business-code（FIFO 补位序破坏——查 dequeueOne 每次恰取 1 个/QueueAlgo 严格 `>` 首见胜出）；allFinished<6 或 elapsedMs≈90000（超时）→ FAIL 分流 business-code（补位停摆/下载不收敛——查 hilog DownloadManager/PieceScheduler）；failed>0 → 先查 server 控制台分流 env（24 连接压力——换 ms=600 或减提交数重跑），server 无异常再查引擎；peakLive<3 且 allFinished=6 → UNVERIFIED（<3 并发窗口被首完成击穿，上限正确性由 S2 独立保证，增大 ms 重跑）。"
+    },
+    {
+      "step": "S4",
+      "expect": "submittedMore=4 liveAfterSubmit2=3 queuedAfterSubmit2=1 cancelledQueued=10 queuedAfterCancel=0 liveAfterCancel=3 newStartsAfterCancel=0 queuedCancelledEcho=1 pausedCount=3 liveAfterStop=0 newStartsAfterStop=0 failed=0",
+      "note": "停止/取消路径（再提交 4 个 #7..#10：S3 排空后门过 3 个+队尾 1 个）。**停止/取消路径锚（本单元核心验收之三）**：liveAfterSubmit2=3+queuedAfterSubmit2=1（S3 收尾干净基线上的即时集合）；queuedAfterCancel=0（stopOne queued 分支即时摘除——removeFromQueue 双集合单点同步）；**newStartsAfterCancel=0（排队取消不补位——源码 StopDownloads :360-369 分支无 ProcessNextQueuedItem，排队取消不经事件不触发 dequeueOne）**；liveAfterCancel=3（排队取消不动 live）；queuedCancelledEcho=1（ManagerHooks.onQueuedCancelled 回声恰一次——D9 可选钩子消费面实测）；pausedCount=3（3 个 live stop 的 onPaused 回声——stopOne live 分支 stopIntent 簿记+downloader.stop() fire-and-forget，回声经 wrapper 簿记→delegate→wasLive 补位）；liveAfterStop=0+newStartsAfterStop=0（**队列空 stop 无补位**——dequeueOne 空队列 no-op，ProcessNextQueuedItem count==0 分支同构）；failed=0。cancelledQueued=10 为观测值（被取消队尾项序号）。分支映射：newStartsAfterCancel≠0 → FAIL 分流 business-code（排队取消补位回归）；queuedCancelledEcho≠1 → FAIL 分流 business-code（回声链缺失/多次）；pausedCount≠3 或 liveAfterStop≠0 → FAIL 分流 business-code（停止排空回归——onPaused 回声缺失，查 PieceScheduler stop/taskpool cancel 链）；newStartsAfterStop≠0 → FAIL 分流 business-code（队列空 stop 补位回归）；liveAfterSubmit2≠3 或 queuedAfterSubmit2≠1 → FAIL 分流 business-code（S3 未排空即进 S4——先查 S3 超时分支）。"
+    },
+    {
+      "step": "SUMMARY",
+      "expect": "恰 4 段（S1..S4，各段含关键键：S1=maxParallel,sourceStatus；S2=liveAfterSubmit,queuedAfterSubmit；S3=peakLive,swapCount,swapTargets；S4=newStartsAfterCancel,newStartsAfterStop）",
+      "note": "end(ok) 聚合单行（段间 |、段内 ,，值内 | 已替换 /），环形缓冲被冲掉时的兜底锚，与步骤行互证；单行 <1500B 由 ProbeKit 两级降级保证。"
+    },
+    {
+      "step": "END",
+      "expect": "ok=true steps=4 elapsedMs=<N>>=0",
+      "note": "ok=true 表示本次会话无脚手架级异常（步骤级 catch 不置 false）；steps=4 与步骤行数互证；ok=false→分流 probe-code。BEGIN/END 按 runId 配对无孤儿。"
+    }
+  ]
+}

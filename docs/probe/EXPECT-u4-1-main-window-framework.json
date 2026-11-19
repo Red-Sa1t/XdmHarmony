@@ -1,0 +1,42 @@
+{
+  "unitId": "P4-U1",
+  "slug": "u4-1-main-window-framework",
+  "sessions": "双会话模型：①主会话——探针页点'运行全部'自动跑 S1→S4（S1/S2/S3 autoRun，S4 autoRun=false 但 ProbePage.startSession 依步骤表全跑，S4 发射勾选面现状=占位行），恰 7 行 BEGIN+S1+S2+S3+S4+SUMMARY+END，steps=4；②S4 单步会话——回探针页勾选 23 项清单后点 S4'执行'（runSingle 单步迷你会话），恰 4 行 BEGIN+S4+SUMMARY+END，steps=1。两段会话各自 BEGIN/END 按 runId 配对；S1~S3 判定取主会话，S4 判定取末次 runId（单步会话）。全局判据：每步骤恰一行，行格式命中 FORMAT 正则 ^\\[XDM_PROBE\\]\\[([A-Z0-9-]+)\\]\\[([A-Za-z0-9-]+)\\]\\s(.+)$；标记行不含通过/失败判定词；单行 <1500B。运行次序红线（设计书 §0-11）：先主页面人工走查（23 项清单，PROBE 手册 §5）→探针页'运行全部'→回探针页勾选→单步 S4；探针会话内不切页（S3 manager.init 后到者接管事件袋——中途切回 Index 换走事件袋，S3 序流断流）。环境前提：S3 需主机侧 node P1-U2-download-server.js 已启动（零改动复用，ms=300 由探针 URL 参数携带）；S1/S2/S4 无需测试源。确定性论证（设计书 §6）：S1 纯内存（升序喂入 t1<t2<t3 + initialize DateAdded desc 排序 → initOrder=c/a/b 必然；addSorted 新最大 dateAdded O(1) 命中 index 0）；S3 先取消排队项后停运行项的次序保证 startedCount 恒 1——若排队取消误补位（回归）则 r2 在 r1 停止前已被 dequeueOne 启动，startedCount=2 且 isQueued 分派脱靶（queuedCancelEcho=0）；maxParallel=1 保证 admitNew(r2) 必入队（status=Waiting(3) 可观测）；ms=300 慢源保证提交+双 stop 亚秒窗口 << 首下载完成时间。S3 dbStatusAfterEcho 锚注记：store 读回经 RecordMapping R2（completed=0 行 status 恒 Stopped）——本锚为 D9 回声链路存在性佐证（链断时读回链路异常呈 -1/日志），唯一性由 queuedCancelEcho=1 承担。重跑残留注记：S1/S2 纯内存零残留；S3 DB 行每轮 +2（probe-p4u1-<runId>-* 主键不冲突），与既有探针同口径不清理；S3 maxParallelBefore 非零残留见 UNVERIFIED 分流。",
+  "steps": [
+    {
+      "step": "BEGIN",
+      "expect": "runId=<非空HHmmss> filesDir=<非空沙箱files路径>",
+      "note": "会话开始标记，与 END 按 runId 配对（主会话与 S4 单步会话各一个独立 runId）。探针页 autoStart=false——本行出现即'运行全部'或 S4'执行'已点击。"
+    },
+    {
+      "step": "S1",
+      "expect": "initOrder=c/a/b addIndex=0 totalCountAfterAdd=4 nameAsc=a/b/c/d nameDesc=d/c/b/a keywordFiltered=1 fullCount=4 categoryFiltered=1 removeHit=1 totalCountAfterRemove=3",
+      "note": "**数据源行为锚（纯内存，零业务副作用）**：initialize 3 记录（dateAdded 升序喂入 b.mp3(t1)/a.pdf(t2)/c.zip(t3)）→ 初始 DateAdded desc 投影 initOrder=c/a/b（xaml.cs:115-150 同构）；addSorted(d.bin t4) → addIndex=0（新项置顶，AddToTop+视图排序呈现等价 §3.3）+totalCountAfterAdd=4；toggleSort('Name') 两轮 → nameAsc=a/b/c/d / nameDesc=d/c/b/a（首击升序再击降序，nextSortDirection 翻转）；applyFilter('a') → keywordFiltered=1（a.pdf）且 fullCount=4（未过滤全长不蚀全量，D2 口径）；clearFilter+applyFilter('','.ZIP' 分类=DEFAULT_CATEGORIES[3] Compressed) → categoryFiltered=1（c.zip）；clearFilter→removeById(recC) → removeHit=1+totalCountAfterRemove=3（增量 notifyDataDelete 路径）。分支映射：initOrder≠c/a/b 或 addIndex≠0 → FAIL 分流 business-code（初始排序/插入位回归——查 DownloadListDataSource.rebuild/addSorted 与 ListAlgo 比较器）；nameAsc/nameDesc 颠倒 → FAIL 分流 business-code（nextSortDirection 翻转矩阵回归）；keywordFiltered≠1 且 fullCount=4 → FAIL 分流 business-code（isOfCategoryOrMatchesKeyword AND 链回归）；removeHit=0 → FAIL 分流 business-code（removeById 幂等语义回归）。S1 全纯内存无网络依赖，异常即 probe-code/framework 回归。"
+    },
+    {
+      "step": "S2",
+      "expect": "statNoSpeed=Downloading statSpeedOnly=1.2MB/s statEtaOnly=00:01 statBoth=1.2MB/s - 00:01 statStopped=Stopped statWaiting=Waiting ip0=del0/pv1/ofv0 ip1Active=p1/r0/del1 ip1Idle=p0/r1 ip2=p1/r1/del1 fin1=of1/pv0/del1",
+      "note": "**纯函数运行时佐证（与 [A] 35 条单测互证）**：generateStatusText 六分支（Helpers.cs:228-257 逐分支——无速无 ETA→标签/只 speed/只 eta/双全 '{Speed} - {ETA}' 含空格连接符/Stopped/Waiting）+ computeToolbarState 五场景（AppController.cs:429-478：进行中 0 选=del0/pv1/ofv0；1 选 active=p1/r0/del1；1 选停态=p0/r1；2 选=p1/r1/del1；完成 1 选=of1/pv0/del1）。分支映射：statBoth≠'1.2MB/s - 00:01' → FAIL 分流 business-code（状态合成/连接符回归）；任一场景布尔与期望不符 → FAIL 分流 business-code（ToolbarAlgo 分支回归——单测互证定位）；statStopped/statWaiting 标签错 → FAIL 分支 business-code（GetStatusText 映射回归）。"
+    },
+    {
+      "step": "S3",
+      "expect": "maxParallelBefore=3 submitted=2 queuedStatusBeforeStop=3 queuedCancelEcho=1 startedCount=1 pausedEcho=1 liveAfterStops=0 queuedAfterCancel=0 dbStatusAfterEcho=1 maxParallelRestored=3",
+      "note": "**F3/D9 闭环锚（本单元核心验收；唯一网络步骤）**：快照 maxParallel→set 1→manager.init(事实袋, hooks 计数+镜像 updateStatus)→r1 slow.bin?ms=300 add+admitNew（门过 live）→r2 add+admitNew（门挡 queued，工厂 startWaiting=true → queuedStatusBeforeStop=3=Waiting 可观测）→**先** isQueued(r2)→stopOne(r2)（queued 分支：removeFromQueue+内存 Stopped+hooks 回声，**不补位**——StopDownloads :360-369 无 ProcessNextQueuedItem 同构）→**后** isLive(r1)→stopOne(r1)（live 分支 stopIntent+downloader.stop）→轮询 live==0（20s 超时）→await hooks 镜像 updateStatus→getDownloadById(r2) 读 DB→恢复 maxParallel+读回。**锚**：queuedCancelEcho=1（isQueued 分派命中+ManagerHooks.onQueuedCancelled 回声恰一次——F3 死按钮闭环证据）；**startedCount=1（排队取消不补位——先取消排队后停运行的次序保证；若误补位则 r2 在 r1 停止前已被 dequeueOne 启动，startedCount=2 且回声=0）**；pausedEcho=1（r1 stop 的 onPaused 回声经 wrapper 簿记→delegate）；liveAfterStops=0+queuedAfterCancel=0（双集合排空）；dbStatusAfterEcho=1（D9 DB 回声链端到端——R2 注记：completed=0 行读回恒 Stopped，本锚为链路存在性佐证，唯一性由 queuedCancelEcho=1 承担）；maxParallelRestored=<maxParallelBefore>（环境恢复读回）。分支映射：errCode/errMessage（2300028/2300007）→ FAIL 分流 env（测试源未启动/地址错/防火墙）；maxParallelBefore≠3 → UNVERIFIED（上轮残留 preferences——重启重跑）；queuedStatusBeforeStop≠3 → FAIL 分流 business-code（门挡失效/工厂 startWaiting 失效）；queuedCancelEcho=0 或 startedCount=2 → FAIL 分流 business-code（**排队取消补位回归**——stopOne queued 分支/isQueued 分派缺失）；startedCount=0 → FAIL 分流 business-code（首发未起跑——查 hilog DownloadManager/引擎）；pausedEcho=0 且 liveAfterStops=0 → 先查 server 控制台（下载异常终止/不可达）分流 env，server 正常再查引擎 stop 链；dbStatusAfterEcho≠1（含 -1）→ FAIL 分流 business-code（updateStatus 链断/读回异常）；maxParallelRestored≠maxParallelBefore → FAIL 分流 business-code（环境恢复失败）。"
+    },
+    {
+      "step": "S4",
+      "expect": "主会话：checked=<0..23> total=23 unchecked=<索引'/'串或 none>；单步会话（验收锚）：checked=23 total=23 unchecked=none（全绿目标）",
+      "note": "人工走查清单发射（manual，runSingle 单步迷你会话）：23 项 Toggle 勾选状态计数，unchecked=1 基项号'/'串或 none。**验收锚=末次 runId 的 S4 行**（主会话中的 S4 为占位发射——'运行全部'时刻勾选面尚未勾选，checked 多为 0，不判定）。分支映射：unchecked 非空 → 按项号分流走查返修（项号→PROBE 手册 §5 对照表→设计书 §6bis/§4 差异锚），verify 记 UNVERIFIED 并列出项号；checked=23/23 为全绿目标。项号→锚速查：1=D15 默认视图；2/3=D1/D2 分类面板与计数；4/5=ApplyFilter 分支；6=view.Filter；7/8=D13/D3.2 搜索与清框；9=D9 列头排序；10=AddToTop 置顶；11~13=D3 选中状态机；14/15=F3/D10/D9 Waiting 行取消排队与持久；16/17=§0-6/D7 工具栏；18/19=D5 菜单壳；20=D12 状态栏；21=LazyForEach 流畅；22=GenerateStatusText 合成；23=OPT-1 深色资源化（深浅色切换全界面可读）。"
+    },
+    {
+      "step": "SUMMARY",
+      "expect": "恰 4 段（S1..S4，各段含关键键：S1=initOrder；S2=statBoth；S3=queuedCancelEcho,startedCount；S4=checked）",
+      "note": "end(ok) 聚合单行（段间 |、段内 ,，值内 | 已替换 /），环形缓冲被冲掉时的兜底锚，与步骤行互证；单行 <1500B 由 ProbeKit 两级降级保证。主会话与 S4 单步会话各自产出 SUMMARY。"
+    },
+    {
+      "step": "END",
+      "expect": "ok=true steps=<主会话4|单步会话1> elapsedMs=<N>>=0",
+      "note": "ok=true 表示本次会话无脚手架级异常（步骤级 catch 不置 false）；steps 与步骤行数互证（主会话 steps=4 / S4 单步 steps=1）；ok=false→分流 probe-code。BEGIN/END 按 runId 配对无孤儿（两段会话独立 runId）。"
+    }
+  ]
+}

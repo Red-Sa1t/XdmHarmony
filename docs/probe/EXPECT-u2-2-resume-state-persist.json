@@ -1,0 +1,42 @@
+{
+  "unitId": "P2-U2",
+  "slug": "u2-2-resume-state-persist",
+  "sessions": "两段式会话模型：A=填测试源后点'运行全部'自动跑 S1~S3（S4 被自动会话触达时会话门跳过、不发标记行，恰 6 行 BEGIN+S1+S2+S3+SUMMARY+END，steps=3）→ 按手册 force-stop 杀进程 → B=重启拉起后点 S4 行'执行'（runSingle 单步会话恰 4 行 BEGIN+S4+SUMMARY+END，steps=1）。两会话 runId 各自独立、BEGIN/END 各自配对无孤儿。全局判据：每步骤恰一行，行格式命中 FORMAT 正则 ^\\[XDM_PROBE\\]\\[([A-Z0-9-]+)\\]\\[([A-Za-z0-9-]+)\\]\\s(.+)$；标记行不含通过/失败判定词；单行 <1500B。环境前提：主机侧 node P1-U2-download-server.js 已启动（零改动复用，ms=600 由探针 URL 参数携带）；设备内测试源填主机局域网 IP（禁 127.0.0.1）；重启后探针页 TextInput 需重填（@State 回缺省）。容差语义注记（§0-2 拍板，保真声明非缺陷）：stop()/暂停/退出不补显式保存（源码 Stop :109-130 无 SaveChunkState）——最旧持久化状态 ≤2s（2000ms 数据门窗口）陈旧：staleBytes 只判 ≥0 不判上界；'恢复真实从断点继续'的判别式是 firstProgressDownloaded≥restoredSum 而非 staleBytes==0。 Delay input: default 600ms, integer 0..60000. Use 80/2500ms only as diagnostic variants; S2 emits slowDelayMs; S4 uses the original pending URL. Non-600ms runs do not inherit default timing predicates such as elapsedToPauseMs>2000.",
+  "steps": [
+    {
+      "step": "BEGIN",
+      "expect": "runId=<非空HHmmss> filesDir=<非空沙箱files路径>",
+      "note": "会话开始标记，与 END 按 runId 配对（A/B 两会话各自独立 runId）。pending 工件目录前缀取会话 A 本行 filesDir=。"
+    },
+    {
+      "step": "S1",
+      "expect": "sourceUrl=<base>/big.bin status=206 contentLength=4194304 rangeSupported=true chunks=<N>>=1",
+      "note": "测试源 Range 能力预检（探针自建 requestInStream + Range: bytes=0-，不走引擎/业务栈）——S2~S4 判定的环境前提。contentLength=4194304 与 SEG_SOURCE_BYTES 同值锚；rangeSupported=true 是 status==206 的谓词编码。分支映射：rangeSupported=false 或 errCode/errMessage（2300028 超时/2300007 拒连）→ FAIL 分流 env（服务器未启动/地址错/防火墙），S2~S4 无判定意义。"
+    },
+    {
+      "step": "S2",
+      "expect": "recordId=probe-p2u2-<runId> addOk=true pauseLanded=true pausedDownloaded=<N:0<N<4194304> pausedPieces=n=<N>>=2/<id8>.<off>.<len>.<dld>.<st>.<wS>-<wE>/... pausedPieceCount=<N>>=2 activeAfterStop=0 elapsedToPauseMs=<N>>2000",
+      "note": "慢源下载到 2MiB 并暂停（新建 record→store.add→Downloader.start→pollUntil(lastDownloaded>=2097152 或 failed, 90s)→stop()→pollUntil(!isRunning && activeSegmentCount===0)→快照转储 pending 原料）。**pauseLanded=true+0<pausedDownloaded<4194304 是暂停窗口确定性锚**（ms=600 慢源 8 连接 ≈850KB/s，2MiB ≈2.4s 到达）；pausedPieceCount>=2（分裂已发生——S4 offsetsUnchanged 对拍需要 >=2 片）；**activeAfterStop=0 是 taskpool.cancel 协作取消排空锚**（U2.1 S5 锚复用，stop 即清 records）；elapsedToPauseMs>2000（2000ms 数据门触发过的间接证据——chunks.json downloaded 非零前提）。pausedPieces 为暂停时点引擎快照单行（与 S3 savedLine/S4 restoredLine 构成三拍对账，同 formatSnapshots 格式）。分支映射：pauseLanded=false 或 pausedDownloaded=0/4194304（快源跑赢暂停）→ UNVERIFIED 换更慢源/大文件重跑；activeAfterStop>0→FAIL 分流 business-code（取消排空回归）；addOk=false→FAIL 分流 business-code（DB 写失败后仍跑下载，查 S2 前置守卫）；engineFailed=true errCode 键组→按码分流（5=InvalidResponse/2=NonResumable/4=MaxRetry 查 env/8=DiskError）。"
+    },
+    {
+      "step": "S3",
+      "expect": "slot1Exists=true slot2Exists=<bool> savedPieces=<N>>=2 savedTotal=4194304 savedLine=n=<N>/<id8>.<off>.<len>.<dld>.<st>.-1--1/... staleBytes=<N>>=0 minFileOverPersisted=true pendingWritten=true",
+      "note": "状态文件体检+pending 落盘（new StateStore(joinTempDir(tempDir,recordId)) 只读 readChunks 直读 + accessSync 两槽 + 逐片 statSync(tempDir/<id>).size 对拍 + 写 pending JSON）。**slot1Exists=true+savedTotal=4194304 是双槽写入链路+探测落位保存锚⑧的活证**（savedTotal 为 D1 恢复自足冗余：探测值落位后随分片态一起持久化）；**minFileOverPersisted=true 是 §3.5 不变量直接观测**（持久化 downloaded ≤ 分片文件实际字节：worker 写盘同步先于回报→主线程 piece.downloaded ≤ 已写盘字节→保存时点快照文件此后只增）；**staleBytes>=0 只判下界不判上界（容差语义）**：stop 不补显式保存（源码 Stop :109-130 无 SaveChunkState，保真声明）——staleBytes=pausedDownloaded−Σsaved.downloaded 在 ms=600 慢源下 ≤2s 窗 ≈ ≤1.7MiB 属正常观测，>0 不判 FAIL（EXPECT 记 UNVERIFIED 分支说明：实测值回填手册 §9 注记②）；slot2Exists 为观测值不判定（首保存只建 .1，>=2 次保存后轮换出 .2——事件点保存+数据门下大概率 true）；savedPieces/savedLine 为观测值（savedLine 窗口列恒 -1--1：持久化态无在途窗口概念）。分支映射：slot1Exists=false 或 savedTotal!=4194304→FAIL 分流 business-code（StateStore 写链/锚⑧回归，查 hilog tag StateStore）；minFileOverPersisted=false→FAIL 分流 business-code（§3.5 不变量破坏——写入时序/文件面回归）；staleBytes<0→FAIL 分流 business-code（内存 Σ<持久化 Σ 账本方向反）；pendingWritten=false→FAIL 分流 business-code（pending 写失败，S4 不可跑）。"
+    },
+    {
+      "step": "S4",
+      "expect": "pendingFound=true rowFound=true restoredPieces=<N>>=2 restoredSum=<N>>=0 restoredLine=n=<N>/<id8>.<off>.<len>.<dld>.<st>.-1--1/... offsetsUnchanged=true resumed=true firstProgressDownloaded=<N>>=restoredSum finished=true finalSize=4194304 tempDirGone=true spotChecks=m0=o/m<p-1>=o/m<p>=o/m2097152=o/m4194303=o allSpotsMatch=true",
+      "note": "重启续传+成品字节抽查（手动单步会话 B：读 pending→getDownloadById 重建 record（DB 行跨重启存在性兼证）→StateStore 直读观测恢复输入→new Downloader(record)→**resume()** 恢复桥入口→捕获首个 onProgress downloadedBytes→等 onFinished（120s）→5 抽查点字节比对 expectedByteAt，点集含 pausedDownloaded 邻域）。**断点续传三联锚（本单元核心验收）**：offsetsUnchanged=true（pending.pieceRows 与 restored 按 id 对拍 offset/length——各分片 offset/length 跨重启不变；结构无 2s 滞后：分裂/完成/失败/探测均事件点即时保存锚①③⑥⑦⑧，滞后只发生在 downloaded 值上）；firstProgressDownloaded>=restoredSum（**fresh-restart 缺陷直接判别式**：恢复真实从断点继续而非从零——若恢复桥未生效走全新 start，首进度必 <restoredSum 且 server 控制台出现 bytes=0- 整流请求）；finalSize=4194304+tempDirGone=true（续传收敛+完成收尾 deleteTempDir 连带清理 chunks.json 工件三件套）；allSpotsMatch=true（续传产物字节正确性：前缀覆盖幂等的跨进程版字节级证据——恢复时 worker openSync 不 TRUNC+lseek(persisted downloaded) 顺序覆盖陈旧尾部）。分支映射：pendingFound=false→env 分流（会话 A 未跑 S3/pending 写失败）；rowFound=false→FAIL 分流 business-code（DB 行跨重启丢失或 addOk=false 仍跑）；offsetsUnchanged=false→FAIL 分流 business-code（分片结构跨重启漂移——恢复桥注入回归，附三拍对账）；firstProgressDownloaded<restoredSum→FAIL 分流 business-code（fresh-restart 缺陷：恢复未生效）；resumed=false/finished=false/finalSize=0（120s 超时）→FAIL 分流 business-code（恢复不收敛——查 hilog PieceScheduler 续传三检）；engineFailed=true errCode=2（NonResumable，Resume not supported）→**Known-behavior 分支**（恢复集含 length=-1 片：预探测状态被持久化后恢复的源码同貌终态 :169-170——核对 S3 savedLine 含 len=-1 片即确认，非缺陷）；tempDirGone=false→FAIL 分流 business-code（收尾清理回归）；allSpotsMatch=false/spotChecks 含 =x→FAIL 分流 business-code（续传拼接字节错位：前缀覆盖幂等破坏/拼装漏序/状态文件在而分片文件被删（sparse 零洞，源码同貌不修）——先交叉核对主机侧 server Range 对账表分流 env）。"
+    },
+    {
+      "step": "SUMMARY",
+      "expect": "会话 A 恰 3 段（S1..S3，各段含关键键：S1=status；S2=pauseLanded,pausedPieceCount,activeAfterStop；S3=minFileOverPersisted,staleBytes）；会话 B 恰 1 段（S4=offsetsUnchanged,firstProgressDownloaded,allSpotsMatch）",
+      "note": "end(ok) 聚合单行（段间 |、段内 ,，值内 | 已替换 /），环形缓冲被冲掉时的兜底锚，与步骤行互证；单行 <1500B 由 ProbeKit 两级降级保证。注意 force-stop 会话 B 的 SUMMARY 只含 S4 一段（runSingle 单步会话重置行缓冲）。"
+    },
+    {
+      "step": "END",
+      "expect": "会话 A：ok=true steps=3 elapsedMs=<N>>=0；会话 B：ok=true steps=1 elapsedMs=<N>>=0",
+      "note": "ok=true 表示本次会话无脚手架级异常（步骤级 catch 不置 false）；steps=3（A）/steps=1（B）与该会话步骤行数互证；ok=false→分流 probe-code。两会话 BEGIN/END 按 runId 各自配对无孤儿。"
+    }
+  ]
+}

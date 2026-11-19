@@ -1,0 +1,71 @@
+{
+  "unitId": "P1-U1",
+  "sessions": "4 会话模型：A=进页自动跑 S0~S7（8 步）；B=点 S8 执行（runSingle 单步会话）；C=杀进程重启后进页自动跑 S0~S7；D=点 S9 执行（单步会话）。EXPECT 逐步骤判定不分执行者，S9 以 S8 之后至少一次重启为前提。全局判据：每步骤恰一行，行格式命中 FORMAT 正则 ^\\[XDM_PROBE\\]\\[([A-Z0-9-]+)\\]\\[([A-Za-z0-9-]+)\\]\\s(.+)$；标记行不含通过/失败判定词；S8/S9 不得出现在自动会话（分派层跳过，END steps=8）。",
+  "steps": [
+    {
+      "step": "BEGIN",
+      "expect": "runId=<非空HHmmss> filesDir=<非空沙箱files路径>",
+      "note": "会话开始标记，与 END 按 runId 配对（多会话各自配对，verify 按 runId 取对应会话段）。自动会话（A/C）进页即产生；S8/S9 单步会话各自带 BEGIN。pending 文件目录前缀取本行 filesDir=。"
+    },
+    {
+      "step": "S0",
+      "expect": "networkTimeout=30 maxRetry=10 retryDelay=10 roundtrip=true downloadDirSuffix=/Downloads tempDirSuffix=/temp",
+      "note": "Config 默认值与读写闭环。默认值锚 Config.cs:120/100/102（NetworkTimeout=30 秒/MaxRetry=10 次/RetryDelay=10 秒——单位语义：U1.2 转毫秒与 sleep×1000）。roundtrip=true 证 preferences set→get 写读闭环（setMaxRetry(7) 后读 7，恢复 DEFAULT_MAX_RETRY 后读 10）。downloadDirSuffix/tempDirSuffix 为 pathSuffix 观测（<filesDir>/Downloads 与 <filesDir>/temp，有意差异 D6/D7）。分支映射：roundtrip=false→FAIL 分流 probe-code；errCode/errMessage 键组→查 hilog tag XdmConfig（init 失败保留默认值继续运行的容错路径，D2 平台化语义）。"
+    },
+    {
+      "step": "S1",
+      "expect": "colCount=22 columns=id/completed/name/date_added/size/status/progress/download_type/filenamefetchmode/maxspeedlimitinkib/targetdir/primary_url/referer_url/auth/user/pass/proxy/proxy_host/proxy_port/proxy_user/proxy_pass/proxy_type ddlTail=WITHOUT ROWID",
+      "note": "建表 schema 观测（raw 句柄 querySql LIMIT 0 取 columnNames + sqlite_master 建表 SQL）。22 列名与顺序逐项对照 SchemaInitializer.cs:13-36——列序是 SELECT * 读回/RecordMapping 投影/本探针观测的根基，禁静默重排（降级必须报告注明）。分支映射：ddlTail=absent 且 S2~S7 正常→D15 降级生效（WITHOUT ROWID 被目标平台 SQLite 拒绝，store 去尾缀重试成功，hilog tag DownloadStore 有 'retry without suffix' 行佐证），记单元报告差异非 FAIL；errCode 键组→建库/建表二次失败后 ready 门 memoize rejected（等价 C# AppDB.Init 失败继续运行），FAIL 分流 business-code/probe-code。"
+    },
+    {
+      "step": "S2",
+      "expect": "id=probe-u1-<runId> rowAdded=true rowsBefore=<N> rowsAfterAdd=<N>+1 rawName=probe-u1-<runId> rawStatus=1 rawCompleted=0 rawDateAdded=<epoch毫秒>",
+      "note": "add 全 22 列插入（DownloadList.cs:187-219 逐参数投影）。rowsBefore/rowsAfterAdd 为 raw COUNT(*) 互证（add 恰 +1）；rowsBefore 首次会话可为 0，S8 累积持久行后 >0，只判差值。rawStatus=1（startWaiting=false→Stopped，Application.cs:58 语义）、rawCompleted=0（add 恒 0，:199）、rawDateAdded 为 epoch 毫秒（D1）。raw* 键取自自开句柄的列上原值（绕过映射强制规则的真值）。分支映射：rowAdded=false 或 rawName=rowMissing→FAIL 分流 business-code；errCode→store 未就绪/建表失败链路。"
+    },
+    {
+      "step": "S3",
+      "expect": "id=probe-u1-<runId> progressWritten=55 progressRaw=55",
+      "note": "updateProgress 直写直读（DownloadList.cs:272-295）。progressRaw 为 raw 句柄读回的列上原值，与写入值一致即过（progress 仅进行中行读入的强制规则在映射层，raw 不受影响）。progressRaw=rowMissing→FAIL 分流 business-code。"
+    },
+    {
+      "step": "S4",
+      "expect": "id=probe-u1-<runId> statusWritten=0 statusRaw=0 statusMapped=1 inProgressCount=<N>>=1",
+      "note": "updateStatus + 读回强制规则（本单元保真复刻的核心观测，D5）。statusWritten=0 即写入值 Downloading(0)；statusRaw=0 为 raw 列上原值（写入生效）；statusMapped=1 为 queryInProgress 映射记录的 status——completed=0 行读回一律 Stopped(1)（DownloadList.cs:95/:165），与写入值无关，单会话内实证。statusRaw=0 与 statusMapped=1 并存=预期 PASS（'updateStatus 写入的值重启后不生效'按预期判定，禁按缺陷返修）。inProgressCount 含 S8 累积行时 >1，statusMapped 按 id 匹配项判定而非计数。分支映射：statusMapped=-1（id 未匹配）→FAIL 分流 probe-code/business-code。"
+    },
+    {
+      "step": "S5",
+      "expect": "id=probe-u1-<runId> markOk=true inProgressBefore=<N> inProgressAfter=<N>-1 allCount=<M> rawCompleted=1 rawName=probe-u1-final.bin rawSize=1000",
+      "note": "markAsFinished + 分型迁移（DownloadList.cs:332-357 + :59-60）。inProgressAfter=inProgressBefore-1（completed 0→1 后进行中列表 -1）；allCount==S2 的 rowsAfterAdd（S2~S5 间无增删行，仅列更新）；rawName/rawSize 为 markAsFinished 落库的 file/finalFileSize 列上原值，rawCompleted=1。分支映射：markOk=false 或 rawCompleted=0→FAIL 分流 business-code。"
+    },
+    {
+      "step": "S6",
+      "expect": "id=probe-u1-<runId> found=true foundKind=1 foundName=probe-u1-final.bin notFoundNull=true",
+      "note": "getDownloadById 命中/未命中（DownloadList.cs:114-177）。完成行 foundKind=1（DownloadKind 分型键）；notFoundNull=true 证未命中 id（probe-u1-missing-<runId>）返回 null。分支映射：notFoundNull=false→FAIL 分流 business-code（未命中误返非 null）；found=false→S5 分型迁移失败的连锁信号。"
+    },
+    {
+      "step": "S7",
+      "expect": "id=probe-u1-<runId> removeOk=true rowsAfterRemove=<N>",
+      "note": "remove + 计数复原（RemoveDownloadById）。判定不变量：rowsAfterRemove == S2 的 rowsBefore（remove 恰抵消 S2 的 add）——设计书 §6 表格写'==rowsAfterAdd'系算术笔误（rowsAfterAdd=rowsBefore+1，remove 后回到 rowsBefore），本表按修正不变量判定，PROBE 手册 §4 注① 同源。分支映射：removeOk=false→FAIL 分流 business-code；计数不符→raw COUNT 或 id 派生链路问题，分流 probe-code。"
+    },
+    {
+      "step": "S8",
+      "expect": "id=probe-u1p1-<runId>-<epoch毫秒> addOk=true progressOk=true statusOk=true persistenceFile=probe-P1-U1-persist.json rawProgress=50 rawStatus=0",
+      "note": "重启持久行写入（runSingle 单步会话，独立 BEGIN/SUMMARY/END，steps=1）。add+updateProgress(50)+updateStatus(Downloading=0) 后 raw 读回：rawProgress=50/rawStatus=0 为列上原值（写入生效）。持久行不移除（累积证据，每按一次 S8 累积一行）；id 毫秒后缀使同秒重复 S8 主键唯一（R3-F1，否则同秒重复运行 addOk=false）；pending JSON 落 <filesDir>/probe-P1-U1-persist.json（大段数据走文件，PROBE_SPEC §2，标记行只记文件名）。分支映射：persistenceFile=writeFailed→查 hilog tag XdmProbeStore 后重按 S8；addOk=false 或 raw*=rowMissing→FAIL 分流 business-code。"
+    },
+    {
+      "step": "S9",
+      "expect": "pendingFound=true id=probe-u1p1-<上次会话runId>-<epoch毫秒> rowFound=true nameMatches=true sizeMatches=true dateAddedMatches=true rawCompleted=0 rawProgress=50 rawStatus=0 mappedStatus=1",
+      "note": "重启后核对（runSingle 单步会话）——重启持久核心判定：rowFound=true 且 name/size/dateAddedMatches 逐项相等（杀进程 force-stop 后行仍在，RelationalStore 自身事务落盘）；rawCompleted=0/rawProgress=50/rawStatus=0 为列上原值；mappedStatus=1 为重启路径的读回强制规则成立（即'updateStatus 写入的值重启后不生效'为预期，D5）。raw* 与 mappedStatus 并存正是保真断言面。分支映射：pendingFound=false rowFound=false→UNVERIFIED（未跑 S8 或文件被清，先跑会话 B 再重启跑 D）；pendingFound=true 且 rowFound=false→FAIL 分流 business-code（持久丢失）；任一 matches=false→FAIL 分流 business-code（读回映射或精度问题）。"
+    },
+    {
+      "step": "SUMMARY",
+      "expect": "自动会话恰 8 段（S0..S7，各段含关键键：S0=roundtrip；S1=colCount,ddlTail；S2=rowAdded,rowsAfterAdd；S3=progressRaw；S4=statusRaw,statusMapped；S5=markOk,inProgressAfter；S6=found,notFoundNull；S7=removeOk,rowsAfterRemove）；S8/S9 单步会话各 1 段",
+      "note": "end(ok) 聚合单行（段间 |、段内 ,，值内 | 已替换 /），环形缓冲被冲掉时的兜底锚，与步骤行互证；单行 <1500B 由 ProbeKit 两级降级保证。"
+    },
+    {
+      "step": "END",
+      "expect": "自动会话 ok=true steps=8 elapsedMs>=0；S8/S9 单步会话 ok=true steps=1 elapsedMs>=0",
+      "note": "ok=true 表示本次会话无脚手架级异常（步骤级 catch 不置 false）；steps 与该会话步骤行数互证（自动会话 8=仅 S0~S7，S8/S9 被分派层跳过无标记行）；ok=false→分流 probe-code。会话守卫冒烟（PROBE 手册 §6）：暖启动重建后新 runId 行完整、无旧会话标记行串入、无孤儿 BEGIN/END；自动会话进行中点手动步骤被 ProbePage.sessionRunning 守卫忽略。"
+    }
+  ]
+}

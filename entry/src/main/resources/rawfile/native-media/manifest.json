@@ -1,0 +1,223 @@
+{
+  "source": "XdmHarmony/tools/native/make_fixtures.py and fixtures/manifest.json",
+  "license": "CC0-1.0",
+  "scope": "Synthetic input samples; not target runtime evidence",
+  "files": [
+    {
+      "path": "audio.m4a",
+      "sha256": "bc07711e61565df03d063be18af19e2fc1ae23f36ea2845a41f21a1393ddb138",
+      "bytes": 24068,
+      "source": "Locally generated mathematical test signal/pattern",
+      "license": "CC0-1.0",
+      "probe": {
+        "streams": [
+          {
+            "index": 0,
+            "codec_name": "aac",
+            "codec_long_name": "unknown",
+            "profile": "1",
+            "codec_type": "audio",
+            "codec_tag_string": "mp4a",
+            "codec_tag": "0x6134706d",
+            "sample_fmt": "fltp",
+            "sample_rate": "44100",
+            "channels": 1,
+            "channel_layout": "mono",
+            "bits_per_sample": 0,
+            "initial_padding": 0,
+            "id": "0x1",
+            "r_frame_rate": "0/0",
+            "avg_frame_rate": "0/0",
+            "time_base": "1/44100",
+            "start_pts": 0,
+            "start_time": "0.000000",
+            "duration_ts": 88200,
+            "duration": "2.000000",
+            "bit_rate": "90600",
+            "nb_frames": "88",
+            "extradata_size": 5,
+            "disposition": {
+              "default": 1,
+              "dub": 0,
+              "original": 0,
+              "comment": 0,
+              "lyrics": 0,
+              "karaoke": 0,
+              "forced": 0,
+              "hearing_impaired": 0,
+              "visual_impaired": 0,
+              "clean_effects": 0,
+              "attached_pic": 0,
+              "timed_thumbnails": 0,
+              "captions": 0,
+              "descriptions": 0,
+              "metadata": 0,
+              "dependent": 0,
+              "still_image": 0
+            },
+            "tags": {
+              "language": "und",
+              "handler_name": "SoundHandler",
+              "vendor_id": "[0][0][0][0]"
+            }
+          }
+        ],
+        "format": {
+          "filename": "/mnt/d/git/HarmonyPC/XdmHarmony/tools/native/fixtures/audio.m4a",
+          "nb_streams": 1,
+          "nb_programs": 0,
+          "format_name": "mov,mp4,m4a,3gp,3g2,mj2",
+          "start_time": "0.000000",
+          "duration": "2.000000",
+          "size": "24068",
+          "bit_rate": "96272",
+          "probe_score": 100,
+          "tags": {
+            "major_brand": "M4A ",
+            "minor_version": "512",
+            "compatible_brands": "isomiso2",
+            "encoder": "Lavf58.24.100"
+          }
+        }
+      }
+    },
+    {
+      "path": "tone-44100-mono.wav",
+      "sha256": "afa9fe6f49979485076a8b3b03f518d584ca07a064431b7b64e33b4065c18bf2",
+      "bytes": 88244,
+      "source": "Locally generated mathematical test signal/pattern",
+      "license": "CC0-1.0",
+      "probe": {
+        "streams": [
+          {
+            "index": 0,
+            "codec_name": "pcm_s16le",
+            "codec_long_name": "unknown",
+            "codec_type": "audio",
+            "codec_tag_string": "[1][0][0][0]",
+            "codec_tag": "0x0001",
+            "sample_fmt": "s16",
+            "sample_rate": "44100",
+            "channels": 1,
+            "bits_per_sample": 16,
+            "initial_padding": 0,
+            "r_frame_rate": "0/0",
+            "avg_frame_rate": "0/0",
+            "time_base": "1/44100",
+            "duration_ts": 44100,
+            "duration": "1.000000",
+            "bit_rate": "705600",
+            "disposition": {
+              "default": 0,
+              "dub": 0,
+              "original": 0,
+              "comment": 0,
+              "lyrics": 0,
+              "karaoke": 0,
+              "forced": 0,
+              "hearing_impaired": 0,
+              "visual_impaired": 0,
+              "clean_effects": 0,
+              "attached_pic": 0,
+              "timed_thumbnails": 0,
+              "captions": 0,
+              "descriptions": 0,
+              "metadata": 0,
+              "dependent": 0,
+              "still_image": 0
+            }
+          }
+        ],
+        "format": {
+          "filename": "/mnt/d/git/HarmonyPC/XdmHarmony/tools/native/fixtures/tone-44100-mono.wav",
+          "nb_streams": 1,
+          "nb_programs": 0,
+          "format_name": "wav",
+          "duration": "1.000000",
+          "size": "88244",
+          "bit_rate": "705952",
+          "probe_score": 99
+        }
+      }
+    },
+    {
+      "path": "video.mp4",
+      "sha256": "a9031eb264daacdb12b8b5f09d28cddedb41e94c59bce3bc53d30a29cfcc2254",
+      "bytes": 8969,
+      "source": "Locally generated mathematical test signal/pattern",
+      "license": "CC0-1.0",
+      "probe": {
+        "streams": [
+          {
+            "index": 0,
+            "codec_name": "h264",
+            "codec_long_name": "unknown",
+            "profile": "100",
+            "codec_type": "video",
+            "codec_tag_string": "avc1",
+            "codec_tag": "0x31637661",
+            "width": 160,
+            "height": 96,
+            "has_b_frames": 1,
+            "sample_aspect_ratio": "1:1",
+            "display_aspect_ratio": "5:3",
+            "level": 11,
+            "field_order": "progressive",
+            "id": "0x1",
+            "r_frame_rate": "25/1",
+            "avg_frame_rate": "25/1",
+            "time_base": "1/12800",
+            "start_pts": 0,
+            "start_time": "0.000000",
+            "duration_ts": 25600,
+            "duration": "2.000000",
+            "bit_rate": "30636",
+            "nb_frames": "50",
+            "extradata_size": 41,
+            "disposition": {
+              "default": 1,
+              "dub": 0,
+              "original": 0,
+              "comment": 0,
+              "lyrics": 0,
+              "karaoke": 0,
+              "forced": 0,
+              "hearing_impaired": 0,
+              "visual_impaired": 0,
+              "clean_effects": 0,
+              "attached_pic": 0,
+              "timed_thumbnails": 0,
+              "captions": 0,
+              "descriptions": 0,
+              "metadata": 0,
+              "dependent": 0,
+              "still_image": 0
+            },
+            "tags": {
+              "language": "und",
+              "handler_name": "VideoHandler",
+              "vendor_id": "[0][0][0][0]"
+            }
+          }
+        ],
+        "format": {
+          "filename": "/mnt/d/git/HarmonyPC/XdmHarmony/tools/native/fixtures/video.mp4",
+          "nb_streams": 1,
+          "nb_programs": 0,
+          "format_name": "mov,mp4,m4a,3gp,3g2,mj2",
+          "start_time": "0.000000",
+          "duration": "2.000000",
+          "size": "8969",
+          "bit_rate": "35876",
+          "probe_score": 100,
+          "tags": {
+            "major_brand": "isom",
+            "minor_version": "512",
+            "compatible_brands": "isomiso2avc1mp41",
+            "encoder": "Lavf58.24.100"
+          }
+        }
+      }
+    }
+  ]
+}

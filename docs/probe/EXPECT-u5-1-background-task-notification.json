@@ -1,0 +1,93 @@
+{
+  "unitId": "P5-U1",
+  "slug": "u5-1-background-task-notification",
+  "sessions": "三会话模型：①主会话——探针页点'运行全部'自动跑 S1→S5（S1/S2/S3/S4 autoRun，S5 autoRun=false 但 ProbePage.startSession 依步骤表全跑，S5 发占位行 phase=placeholder——经 mainSessionS1Seen 标记识别，无副作用），恰 8 行 BEGIN+S1+S2+S3+S4+S5+SUMMARY+END，steps=5；②S5 单步会话 #1（armed）——S5 行点'执行'（armed 快照空），恰 4 行 BEGIN+S5+SUMMARY+END，steps=1，phase=armed；③S5 单步会话 #2（survived）——人工走查（点 X 关窗→等 15-20s→Dock/任务栏恢复窗口→回探针页）后再点'执行'，恰 4 行 BEGIN+S5+SUMMARY+END，steps=1，phase=survived（验收锚）。三段会话各自 BEGIN/END 按 runId 配对；S1~S4 判定取主会话，S5 判定取末次 runId（survived 段）。survived emit 后 armed 快照复位，再执行开启新一轮 armed。全局判据：每步骤恰一行，行格式命中 FORMAT 正则 ^\\[XDM_PROBE\\]\\[([A-Z0-9-]+)\\]\\[([A-Za-z0-9-]+)\\]\\s(.+)$；标记行不含通过/失败判定词；单行 <1500B。前置人工：启动主机测试源 P1-U2-download-server.js（零改动复用，/slow.bin?ms=N 任意非负整数合法）；首次运行会弹通知授权框（requestEnableNotification，点允许）。运行次序：主会话→S5-armed 单步→人工关窗/恢复→S5-survived 单步。确定性论证：S2 申请锚=admitNew 同步事件+主线程串行簿记，轮询 ≤10s 至 notifier.taskNotificationId()>=0（startBackgroundRunning.then 簿记=真实注册完成锚，R2-F1——isTaskApplied 是 IPC 往返前的乐观守卫值，不作锚；startBackgroundRunning 异步往返通常 <1s）；S3 窗口=liveCount>0 且 ≤10s（3×/slow.bin?ms=300 全链 ≈3-5s×并发节流）；S4 轮询 ≤120s 至 activeCount==0 且 getAllContinuousTasks==0（系统侧任务表清空=真实释放完成锚，R2-F1——isTaskApplied 乐观复位点早于 stop IPC 往返完成，不作锚；补位 dequeueOne 已在 delegate 后执行，读数含补位结果）；S5 进度推进=store 读数（事件袋 DB 回声镜像 Index 消费方角色：progress→updateProgress、finished→markAsFinished）。重跑残留注记：probe-p5u1-<runId>-* 主键不冲突 DB 行每轮 +4（主会话 3+S5 1），与既有探针同口径不清理；模块级 LastCancel/armed 快照进程内存活，应用重装/进程重启后复位。",
+  "steps": [
+    {
+      "step": "BEGIN",
+      "expect": "runId=<非空HHmmss> filesDir=<非空沙箱files路径>",
+      "note": "会话开始标记，与 END 按 runId 配对（主会话与两段 S5 单步会话各一个独立 runId）。探针页 autoStart=false——本行出现即'运行全部'或 S5'执行'已点击。"
+    },
+    {
+      "step": "S1",
+      "expect": "notifyEnabled=true notifyBaseline=0 taskBaseline=0 taskModes=none cancelListener=on",
+      "note": "**授权+基线+监听注册锚**：notifyEnabled=isNotificationEnabledSync() 授权态（首次运行已弹框点允许→true）；notifyBaseline=getActiveNotificationCount() 通知基线（干净环境 0；历史会话残留>0 为合法观测）；taskBaseline=getAllContinuousTasks() 长时任务基线（0=无；>0 说明上轮异常残留，结合 taskModes 判读）；taskModes=全部任务 backgroundModes '/' 连接（基线 0 时 none）；cancelListener=on（continuousTaskCancel 监听进程内注册一次）。分支映射：notifyEnabled=false → ENV+重跑（1600004 授权被拒不再弹——D7，卸载重装复位授权）；taskBaseline>0 且 taskModes=dataTransfer → 检查上轮会话是否异常中断（getAllContinuousTasks 残留）。",
+      "keys": {
+        "notifyEnabled": "true",
+        "notifyBaseline": "0（干净环境；残留通知>0 合法观测）",
+        "taskBaseline": "0",
+        "taskModes": "none",
+        "cancelListener": "on"
+      }
+    },
+    {
+      "step": "S2",
+      "expect": "submitted=3 applied=true notificationId=<系统返回值> continuousTaskId=<值|none> taskCount=1 mode0=dataTransfer abilityName=EntryAbility",
+      "note": "**长时任务申请锚（0→非 0 跃迁）**：submitted=3（确定性 id probe-p5u1-<runId>-1..3，store.add 前覆盖 record.id）；applied=true（轮询 ≤10s 至 notifier.taskNotificationId()>=0——startBackgroundRunning.then 簿记=真实注册完成锚，R2-F1；isTaskApplied 是 IPC 往返前的乐观守卫值不作锚，故其后的 getAllContinuousTasks 读数无瞬态空窗）；notificationId=**系统返回值**（startBackgroundRunning 12+ 形态 res.notificationId——publish 契约五要素之一，严禁自选，任何非负整数皆合法观测）；continuousTaskId=值或 none（15+ 可选字段，返回 undefined 时探针记 -1→none，合法观测）；taskCount=1（**全应用单长时任务实例**——一个 UIAbility 同一时刻仅一个，文档硬约束）；mode0=dataTransfer（backgroundModes[0]，module.json5 abilities[0] 配置的系统侧回读）；abilityName=EntryAbility（wantAgentAbilityName）。分支映射：applied=false → FAIL 分流 business-code（module.json5 backgroundModes/KEEP_BACKGROUND_RUNNING 权限/申请链）；errCode=9800005/9800006 → FAIL 分流 business-code（长时任务验证/通知校验失败）；taskCount≠1 → FAIL 分流 business-code（单实例语义/残留任务清理）。",
+      "keys": {
+        "submitted": "3",
+        "applied": "true",
+        "notificationId": "<系统返回值，非负整数>",
+        "continuousTaskId": "<值|none（undefined 记 -1→none，合法观测）>",
+        "taskCount": "1",
+        "mode0": "dataTransfer",
+        "abilityName": "EntryAbility"
+      }
+    },
+    {
+      "step": "S3",
+      "expect": "progressEvents=<n> publishOk=<n> publishFail=0 publishMsMax=<ms> notifyCount=1",
+      "note": "**实况窗 publish 观测锚（500ms 门直发，D11 无二次节流）**：progressEvents=事件袋 S3 窗口 delta（3 下载×500ms 门，窗口内 ≈20-40 量级；环境敏感非固定值）；publishOk=publish 诊断计数**全会话累计**（D12——含 S3 窗口外 S2 起跑期已发的 publish，故 publishOk>=progressEvents 合法）；publishFail=0（通知授权正常时）；publishMsMax=单次 publish 最大耗时 ms（D12 观测面——**D11 二次节流偏差的实证输入**，>100ms 量级再登记偏差）；notifyCount=1（实况窗通知在）。**observe-both 项**：notifyCount=0 时回读 S1 notifyEnabled——通知开关关闭时 publish 无报错但不显示（系统行为），非 publish 链故障。分支映射：publishOk=0 且 progressEvents>0 → FAIL 分流 business-code（五要素 publish 链/id 簿记——注意 applied 前提，S2 applied=false 时本步顺延 FAIL）；publishFail 持续增长 → 分流 business-code（publish 异常链）+ 交叉回读 S1 notifyEnabled。",
+      "keys": {
+        "progressEvents": "<n>（S3 窗口 delta，环境敏感）",
+        "publishOk": "<n>（全会话累计，>=progressEvents 合法）",
+        "publishFail": "0（授权正常时；>0 观察-both 回读 S1）",
+        "publishMsMax": "<ms>（D11 偏差实证输入）",
+        "notifyCount": "1（通知开关关闭时 0，observe-both）"
+      }
+    },
+    {
+      "step": "S4",
+      "expect": "finishedCount=3 released=true taskCountAfter=0 finishId=1001 notifyCountWithFinish=1 notifyCountAfterCancel=0 lastCancelReason=none",
+      "note": "**完成→释放锚（归零释放跃迁）**：finishedCount=3（事件袋 onFinished 计数）；released=true（轮询至 activeCount==0 且 getAllContinuousTasks==0——系统侧任务表清空=真实释放完成锚，R2-F1：isTaskApplied 乐观复位点早于 stopBackgroundRunning IPC 往返完成不作锚，taskCountAfter 读数无瞬态>0 空窗；补位 dequeueOne 已在 delegate 之后执行，读数含补位结果）；taskCountAfter=0（同轮询读数系统侧确认已释放）；finishId=1001 或 1002（pickFinishNotificationId——系统返回 notificationId===1001 时 1002，合法观测两者皆可）；notifyCountWithFinish=1（完成通知在、实况窗已移除；3 次完成同 id 1001/1002 合并为 1 条——**observe-both**：ShowNotification=false 时 0）；notifyCountAfterCancel=0（探针 cancel(finishId) 防御性清理后）；lastCancelReason=none（LastCancel 未捕获=系统未取消任务——**10 分钟不更新取消契约未触发的直接证据**；caught 时为数字，API 24 不做枚举名映射，12=26+ detailedReason 数据传输未更新）。分支映射：released=false → FAIL 分流 business-code（释放链/竞态回补）；taskCountAfter>0 → FAIL 分流 business-code（stopBackgroundRunning 调用面）；notifyCountWithFinish=0 → observe-both（回读设置页 ShowNotification 与 S1 notifyEnabled）。",
+      "keys": {
+        "finishedCount": "3",
+        "released": "true",
+        "taskCountAfter": "0",
+        "finishId": "1001|1002（撞号避让，两者皆合法）",
+        "notifyCountWithFinish": "1（ShowNotification=false 时 0，observe-both）",
+        "notifyCountAfterCancel": "0",
+        "lastCancelReason": "none（caught 时为数字，环境敏感）",
+        "lastCancelId": "none（caught 时为数字）"
+      }
+    },
+    {
+      "step": "S5",
+      "expect": "主会话占位：phase=placeholder armedState=<none|armed> recordId=<id|none>；单步 #1：phase=armed applied=true notificationId=<系统返回值> progressAtArmed=<n> recordId=probe-p5u1-<runId>-s5；单步 #2（验收锚）：phase=survived taskAlive=<n> progressAtArmed=<n> progressNow=<n> advanced=true downloadFinished=<bool> recordId=<id> notifyCount=<n> lastCancelReason=<none|数字>",
+      "note": "**后台存活验收锚（两阶段单步；判定取末次 runId=survived 段）**：armed 行=armed 快照写入锚（applied=true + progressAtArmed=起跑初期读数 0 或首个 500ms 门值）；主会话内 S5 为 phase=placeholder 占位发射（无副作用）。survived 行（人工走查'点 X 关窗→等 15-20s→Dock/任务栏恢复→回探针页'后）：taskAlive>=1（getAllContinuousTasks 任务在——关窗未杀长时任务的系统侧证据）；progressNow>progressAtArmed（advanced=true——**关窗后下载继续的直接证据**，进度来自事件袋 DB 回声写入的 store 读数）；downloadFinished=false（下载未跑完）；notifyCount>=1（实况窗在）；lastCancelReason=none（未收系统取消）。**合法观测分支（不判 FAIL）**：taskAlive=0 且 downloadFinished=true=下载在后台已跑完（/slow.bin?ms=2000 全链 16-60s，短于走查窗口即此形态）——关窗后下载继续的另一种直接证据；advanced=true 皆应成立。**observe-both/环境敏感项**：X 拦截（onPrepareToTerminate）仅 2in1 生效——非 2in1 环境关窗=直接退出，S5-survived 无法在本进程观测（advanced=false/taskAlive=0 且 downloadFinished=false）→ ENV 分支，用 2in1 形态复验或以手动最小化验证保活链（D13 降级预案：最小化即后台继续）。分支映射：taskAlive>=1 且 advanced=false → FAIL 分流 business-code（保活链/事件袋 DB 回声）；lastCancelReason=<数字> → 按数字分流（12=数据传输未更新——检查 publish 链是否停滞；其他值对照后台任务文档登记）。",
+      "keys": {
+        "phase": "placeholder（主会话）|armed（单步 #1）|survived（单步 #2）",
+        "applied": "true（armed 行）",
+        "notificationId": "<系统返回值>（armed 行）",
+        "progressAtArmed": "<n>（0 或首个 500ms 门值）",
+        "recordId": "probe-p5u1-<runId>-s5",
+        "taskAlive": ">=1（下载后台已跑完时 0，合法观测）",
+        "progressNow": "<n>（store 读数；record 不存在时 -1）",
+        "advanced": "true（survived 健康锚；非 2in1 环境无法观测→ENV）",
+        "downloadFinished": "false|true（true=后台跑完，合法观测）",
+        "notifyCount": ">=1（授权正常时）",
+        "lastCancelReason": "none|<数字>"
+      }
+    },
+    {
+      "step": "SUMMARY",
+      "expect": "[SUMMARY] S1=<关键值>|S2=<关键值>|S3=<关键值>|S4=<关键值>|S5=<关键值>",
+      "note": "恰 5 段（各段含关键键：S1=notifyEnabled、S2=applied、S3=notifyCount、S4=released、S5=phase）；环形缓冲兜底锚；单行 <1500B（超长时 ProbeKit 两级降级只留各段首 kv——格式仍合法）。"
+    },
+    {
+      "step": "END",
+      "expect": "ok=true steps=<主会话5|单步会话1> elapsedMs=<N>>=0",
+      "note": "ok=true 表示本次会话无脚手架级异常（步骤级 catch 不置 false）；steps 与步骤行数互证（主会话 steps=5 / S5 单步 steps=1）；ok=false→分流 probe-code。BEGIN/END 按 runId 配对无孤儿（三段会话独立 runId）。主会话 elapsedMs 含 S3 窗口（≤10s）与 S4 释放等待（≤120s 超时上限）——总时长数十秒属预期。"
+    }
+  ]
+}

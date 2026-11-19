@@ -1,0 +1,45 @@
+{
+  "unitId": "P0-U0",
+  "steps": [
+    {
+      "step": "BEGIN",
+      "expect": "runId=<6位数字HHmmss> filesDir=<以/开头且含 com.example.xdmharmony 的沙箱路径>",
+      "note": "会话起始行；runId 为本地时钟 HHmmss（同秒重跑撞号由 BEGIN/END 配对+取最后 runId 吸收）；filesDir 与兜底文件 <filesDir>/probe-latest.txt 路径一致；与 END 行配对检查。"
+    },
+    {
+      "step": "S1",
+      "expect": "deviceType=<2in1|phone|tablet|default 等 deviceInfo.deviceType 合法形态值> osFullName=<非空白名单串>",
+      "note": "模拟器（2-in1 镜像）预期 deviceType=2in1；真机记录实际形态作 U0.5 平台确认输入。osFullName 可含 - . 等白名单字符，白名单外字符（如 CJK）被消毒为 ?，属接受观测损失，不算 FAIL。"
+    },
+    {
+      "step": "S2",
+      "expect": "sdkApiVersion=<正整数≥23> firstApiVersion=<正整数>",
+      "note": "本工程以 API 24（SDK 6.1.1(24)）编译：模拟器=24；真机 HAD-W24（MateBook Pro）实测 API 23（6.1.0），工程已适配 compatibleSdk 6.1.0(23)（2026-10-03 探针会话），23/24 均合法，记实际值即可。firstApiVersion 随设备出厂不可预知，只判存在且为正整数。"
+    },
+    {
+      "step": "S3",
+      "expect": "marketName=<非空字符串，可含空格>",
+      "note": "外部产品系列名（如 HarmonyOS PC）；空格在值白名单内属合法；观测为空记 UNVERIFIED，判定以真机实测为准。"
+    },
+    {
+      "step": "S4",
+      "expect": "bundleName=com.example.xdmharmony versionName=1.0.0 versionCode=1000000",
+      "note": "与 AppScope/app.json5 的 versionName/versionCode 完全一致（getBundleInfoForSelfSync 查自身免权限）；异常时本行输出 errCode/errMessage 键组，判 FAIL 并分流 probe-code/env。"
+    },
+    {
+      "step": "S5",
+      "expect": "probeFile=probe-selftest.txt writeBytes=<正整数> readBackBytes=<正整数且等于 writeBytes>",
+      "note": "沙箱写读自检：verify 比对 writeBytes 与 readBackBytes 相等（探针红线：不输出 match/differs 判定词，只出观测值）；文件应存在于 <filesDir>/probe-selftest.txt，内容为 <runId> P0-U0 selftest；失败时输出 errCode/errMessage 键组。"
+    },
+    {
+      "step": "SUMMARY",
+      "expect": "S1=deviceType=<v>,osFullName=<v>|S2=sdkApiVersion=<n>,firstApiVersion=<n>|S3=marketName=<v>|S4=bundleName=<v>,versionName=<v>,versionCode=<n>|S5=probeFile=<v>,writeBytes=<n>,readBackBytes=<n>",
+      "note": "段间以 | 分隔、段内 kv 以 , 连接且保留该步全部 kv（段内值中的 | 已被 ProbeKit 替换为 /）；各段观测值须与 S1~S5 行一致；单行 <1500 字节（超长时 ProbeKit 两级降级：每段留首 kv、再硬截断）。"
+    },
+    {
+      "step": "END",
+      "expect": "ok=true steps=5 elapsedMs=<非负整数>",
+      "note": "steps 恰为 5（每步骤恰一行）；ok=true 仅指无脚手架级异常，步骤级失败以 err= 观测呈现，探针日志不出现 PASS/FAIL 词；elapsedMs 为 Date.now 差值，只判非负。"
+    }
+  ]
+}

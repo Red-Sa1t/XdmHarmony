@@ -1,0 +1,50 @@
+{
+  "unitId": "P0-U2",
+  "steps": [
+    {
+      "step": "BEGIN",
+      "expect": "runId=<非空HHmmss> filesDir=<非空沙箱files路径>",
+      "note": "会话开始标记，与 END 按 runId 配对（多轮运行取最后一个 runId）。autoStart=false，探针页填完测试源 URL 点\"运行全部\"后才产生。全局判据：每步骤恰一行，行格式命中 FORMAT 正则 ^\\[XDM_PROBE\\]\\[([A-Z0-9-]+)\\]\\[([A-Za-z0-9-]+)\\]\\s(.+)$；标记行不含通过/失败判定词。"
+    },
+    {
+      "step": "S1",
+      "expect": "url=<base>/big.bin status=200 chunks>=1 totalBytes=4194304 firstChunkBytes>0 writtenBytes=4194304 streamClosed=true detailFile=存在",
+      "note": "requestInStream 流式落盘（dataReceive 计数+writeSync，dataEnd 门控后 emit）。chunks 依平台分块策略浮动（4MiB/64KB 约 64 块），只判范围不写死；verify 复算 totalBytes==writtenBytes==4194304（BIG_BIN_BYTES 锚，echo server/ProbeHttpLogic/本表三处同值）；streamClosed 为 dataEnd 回调实达的观测标志。交叉核对：hdc shell ls -l <filesDir>/probe-http-s1.bin 应 4194304 字节，cat detailFile 为响应头 JSON。失败形态：errCode/errMessage 键组替代正常键集→先查测试源/防火墙（env 分流）。"
+    },
+    {
+      "step": "S2",
+      "expect": "url=<base>/big.bin requestRange=bytes=0- status=206 contentLength=4194304 contentRangeTotal=4194304 rangeSupported=true",
+      "note": "Range: 0- → 206 判定。rangeSupported 为 (status==206) 的谓词编码——服务端 Range 能力观测，非探针自身判定；contentLength 取值链 Content-Length→ContentRange total→-1；contentRangeTotal 来自 echo 服务 Content-Range: bytes 0-4194303/4194304。206 是 resumable 判定与分段下载前提（MIGRATION_PLAN 决策 9/3）。任一键不符→FAIL 分流 probe-code。"
+    },
+    {
+      "step": "S3",
+      "expect": "sent=identity serverEcho=identity contentLengthMatches=true",
+      "note": "Accept-Encoding: identity 透传观测（echo 服务回显实收头，去空白后单 token）。contentLengthMatches 为 (响应 Content-Length 头==体字节数) 的谓词编码。分支映射：serverEcho=absent 或非 identity→设计书 §8-分支 D（U1.2 不可依赖 identity，按响应 Content-Encoding 判 Compressed），不需换栈。"
+    },
+    {
+      "step": "S4",
+      "expect": "concurrent=8 all206=true minDurationMs>0 maxDurationMs>=minDurationMs totalBytes=4194304 firstErrCode=0",
+      "note": "TaskPool 内 8 并发（splitRangeWindows(4194304,8) 各窗 524288B，@Concurrent worker 内 http）。all206 为 8 个 SegmentResult 全 status==206 的谓词编码；TaskPool 内 http 可用性即风险#4 观测本体；耗时上限不预设，只判 >0。分支映射：all206=false 且 firstErrCode 非 0（或本步 err 行为 taskpool 线程内失败）→ §8-分支 B：风险#4 实证，U2.1 走全主线程退化路径，非 probe-code 返修。"
+    },
+    {
+      "step": "S5",
+      "expect": "requestUrl=<base>/redirect status=200 redirectFollowed=true finalUrl=<以/final结尾> cookieSeen=XDMProbeCookie=1 cookieSent=true",
+      "note": "重定向跟随+Cookie 注入（302 绝对 Location→/final 回显）。redirectFollowed 谓词=finalUrl 以 /final 结尾（finalUrl 取服务端回显——http 的 HttpResponse 无最终 URL 字段，等价原版 FinalUri=redirectUri??ResponseUri）；cookieSent 谓词=cookieSeen 含 ECHO_COOKIE。仅同主机 302：本机无 enableAutoCookie（起始版本 26>24）。分支映射：redirectFollowed=false→U1.2 显式 maxRedirects；cookieSeen=absent→记录平台不转发语义、U1.2 每请求重注 Cookie（§8-分支 E），均不需换栈。"
+    },
+    {
+      "step": "S6",
+      "expect": "timeoutSetMs=3000 timedOut=true errCode=2300028 elapsedMs>=3000",
+      "note": "超时控制与错误码：不可达地址（RFC 5737 TEST-NET-1 192.0.2.1，不依赖测试源）+ connectTimeout/readTimeout=3000ms（与产品 30s 同一参数位，产品值由 U1.2 固化）。timedOut 谓词=isTimeoutCode(errCode)，即 errCode==2300028。接受域：errCode=2300028 主判；2300007（RST/拒绝环境）→UNVERIFIED，按手册 §5 换 TEST-NET-2 地址/防火墙/关代理重跑；其他非零→FAIL 分流 env；timedOut=false 且 errCode=0 对不可达地址不应出现，出现即 FAIL。"
+    },
+    {
+      "step": "SUMMARY",
+      "expect": "恰 6 段（S1..S6），各段含关键键：S1=status,streamClosed；S2=status,rangeSupported；S3=serverEcho；S4=all206；S5=redirectFollowed；S6=timedOut,errCode",
+      "note": "end(ok) 聚合单行（段间 |、段内 ,，值内 | 已替换 /），环形缓冲被冲掉时的兜底锚，与步骤行互证；单行 <1500B 由 ProbeKit 两级降级保证。"
+    },
+    {
+      "step": "END",
+      "expect": "ok=true steps=6 elapsedMs>=0",
+      "note": "ok=true 表示本次会话无脚手架级异常（步骤级 catch 不置 false）；steps=6 与步骤行数互证；ok=false→分流 probe-code。会话守卫冒烟（手册 §6）：暖启动重建会话后新 runId 九行完整、无旧会话标记行串入、无孤儿 END。"
+    }
+  ]
+}

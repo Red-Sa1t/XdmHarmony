@@ -1,0 +1,82 @@
+{
+  "unitId": "P5-U2",
+  "slug": "u5-2-clipboard-save-dir",
+  "sessions": "四会话模型：①主会话——探针页点'运行全部'自动依表跑 S1→S5（S1/S2 真观测，S3/S4/S5 发占位行 mode=mainSessionPlaceholder——经 S1 记录的 s1RunId 比对当前 runId 识别，无副作用），恰 8 行 BEGIN+S1+S2+S3+S4+S5+SUMMARY+END，steps=5；②S3 单步会话——人工复制 http(s) 直链（与 S2 写入 URL 不同）后 S3 行点'执行'，恰 4 行 BEGIN+S3+SUMMARY+END，steps=1；③S4 单步会话——S4 行点'执行'（弹目录 picker 人工选/取消），恰 4 行 BEGIN+S4+SUMMARY+END，steps=1；④S5 单步会话——正常模式走查 10 项勾选后 S5 行点'执行'发射，恰 4 行 BEGIN+S5+SUMMARY+END，steps=1。四段会话各自 BEGIN/END 按 runId 配对；S1/S2 判定取主会话，S3/S4/S5 判定取各自单步会话末次 runId。全局判据：每步骤恰一行，行格式命中 FORMAT 正则 ^\\[XDM_PROBE\\]\\[([A-Z0-9-]+)\\]\\[([A-Za-z0-9-]+)\\]\\s(.+)$；标记行不含通过/失败判定词；单行 <1500B。前置人工：无测试源需求（本单元不下载——S2 仅 setData 程序写入剪贴板无需权限 D14，startDownloadAutomatically 默认 false 不触发下载）；首次运行 S1 弹 READ_PASTEBOARD 授权框（requestPermissionsFromUser fire-and-forget，点允许——拒绝后 getData 201、监视链空转不重弹 D9）。运行次序：主会话→S3 单步（先人工复制）→S4 单步→正常模式走查 10 项→S5 单步发射。确定性论证：S2 识别段=setData→系统 on('update') 推送（主线程）→getData Promise 读回→clipboardChanged 三重过滤链，轮询 detectCount ≤10s（POLL 100ms——推送链毫秒级，10s 为保守上限）；去重段=同 URL 二次写入必被 lastClipboardText 锚吞（:70 次序红线：无效文本不更新锚）；过滤段=ftp:// 被 isUriValid scheme 白名单拒；S4 StateStore 清理=mkdirSync+writeSync 两个假文件+removeById（listFileSync+逐文件 unlinkSync+rmdirSync）主线程同步，accessSync 复检确定性成立；S5 计数=页面 @State 勾选面直读。重跑残留注记：lastClipboardText/detectCount/filteredCount 为进程内存活单例态——同一应用会话内第二次'运行全部'的 S2 detectDelta=0 属去重锚重跑伪影（合法观测，杀进程/重装后重跑复得 detectDelta=1；rerunOf 对比时人工标注）；S3 detectBaseline 在 S2 收尾刷新——未跑主会话直接单步 S3 时基线 0（合法观测）；probe-p5u2-<runId>/ 目录由 removeById 自清理（tempGone=true 即无残留）；S4 多轮选择 recentFolders 头插累计 folderCount>1 合法；Module 级 READ_PASTEBOARD 授权一经允许持续有效（会话内不重弹）。",
+  "steps": [
+    {
+      "step": "BEGIN",
+      "expect": "runId=<非空HHmmss> filesDir=<非空沙箱files路径>",
+      "note": "会话开始标记，与 END 按 runId 配对（主会话与三段单步会话各一个独立 runId）。探针页 autoStart=false——本行出现即'运行全部'或单步'执行'已点击。"
+    },
+    {
+      "step": "S1",
+      "expect": "cfgBefore=<bool> cfgAfter=true watcherActive=true permRequested=true detectBase=<n> filteredBase=<n>",
+      "note": "**监视订阅+权限申请锚**：cfgBefore=快照 monitorClipboard（干净环境 false；上轮会话已置 true 则 true——合法观测）；cfgAfter=true（置位后回读，S1 置 true 后**不恢复**——S2/S3 与走查①同向依赖）；watcherActive=true（syncFromConfig→start 双守卫过+on('update') 订阅建立——ClipboardMonitor.cs:47-59 状态机）；permRequested=true（requestReadPermission 会话级一次申请守卫置位——**首次运行此刻系统弹 READ_PASTEBOARD 授权框，人工点允许**；同会话重跑恒 true 合法观测；用户此前在正常模式点过 New 菜单预填亦已触发同一守卫（R3-F1 共用）——true 为合法观测）；detectBase/filteredBase=基线计数（干净环境 0；上轮会话累计>0 合法观测）。分支映射：errCode=201 → FAIL 分流 business-code（module.json5 READ_PASTEBOARD 缺配/reason/usedScene 缺失）；watcherActive=false → FAIL 分流 business-code（订阅链/start 内部 Config 门——cfgAfter=true 时不应发生）。",
+      "keys": {
+        "cfgBefore": "<bool>（干净环境 false；残留 true 合法观测）",
+        "cfgAfter": "true",
+        "watcherActive": "true",
+        "permRequested": "true（首跑弹授权框，人工点允许）",
+        "detectBase": "<n>（干净环境 0）",
+        "filteredBase": "<n>（干净环境 0）"
+      }
+    },
+    {
+      "step": "S2",
+      "expect": "url1=http://192.168.1.20:8080/big.bin detectDelta=1 dedupDetectDelta=0 filteredUrl=ftp://host/f.bin filteredDelta=1 lastDetectedUrl=http://192.168.1.20:8080/big.bin lastReadOk=true",
+      "note": "**程序写入直链三连锚（识别/去重/过滤三段事实）**：url1/filteredUrl=探针写入常量（setData 轨无需权限 D14）；detectDelta=1（识别——setData→on('update') 推送→getData→clipboardChanged 三重过滤链全过→lastClipboardText 更新+detectCount++，轮询 ≤10s）；dedupDetectDelta=0（去重——同 URL 二次写入被 lastClipboardText 锚吞：ClipboardMonitor.cs:66-71 第三道，无效/重复文本不更新锚）；filteredDelta=1（过滤——ftp:// 被 isUriValid scheme 白名单拒：Helpers.cs:45-61 仅 http/https）；lastDetectedUrl=url1（命中回读）；lastReadOk=true（getData 成功）。**observe-both 项**：lastReadOk=false 且 detectDelta=0=READ_PASTEBOARD 被拒（getData 201，监视链空转 D9）——系统设置授权后重跑。分支映射：lastReadOk=true 且 detectDelta=0 → FAIL 分流 business-code（on('update') 订阅链/过滤链）；dedupDetectDelta≠0 → FAIL 分流 business-code（lastClipboardText 次序红线 :70）；filteredDelta=0 → FAIL 分流 business-code（isUriValid 链）；detectDelta>1 → 检查同会话内是否有其它剪贴板写入干扰（轮询窗口内写入重叠）。",
+      "keys": {
+        "url1": "http://192.168.1.20:8080/big.bin",
+        "detectDelta": "1（lastReadOk=false 时 0 → observe-both 权限被拒；同会话重跑 0 → 重跑伪影合法观测）",
+        "dedupDetectDelta": "0",
+        "filteredUrl": "ftp://host/f.bin",
+        "filteredDelta": "1（lastReadOk=false 时 0 → observe-both）",
+        "lastDetectedUrl": "http://192.168.1.20:8080/big.bin",
+        "lastReadOk": "true（false=权限被拒 observe-both）"
+      }
+    },
+    {
+      "step": "S3",
+      "expect": "lastDetectedUrl=<用户复制的http(s)直链> detectDelta=<n>=1 lastReadOk=true probeHandlerFired=<n>>=0",
+      "note": "**人工复制轨锚（跨应用复制被识别；单步会话，判定取末次 runId）**：lastDetectedUrl=用户复制 URL（含 CJK 经 '?' 消毒合法观测）；detectDelta=对 S2 后基线的增量（用户复制动作已触发 onUpdate——>=1 即识别成立）；lastReadOk=true（授权正常时）；probeHandlerFired=探针 urlHandler 命中累计（后到者接管锚——ClipboardWatcher 单订阅者被探针页接管，Index 不在场；跨会话累计非负皆合法）。**observe-both 项**：detectDelta=0 且 lastDetectedUrl 未变=复制了非 http(s) 文本或与 S2 同 URL（lastClipboardText 去重锚吞）——按手册换新直链重做，非故障。**分工注记（防假 PASS）**：page=probe 冷启动下本步只验'识别+计数'，弹窗预填层由走查①承担（Index 接线层不在探针轨）。分支映射：lastReadOk=false → observe-both（权限被拒，同 S2 分支）。",
+      "keys": {
+        "lastDetectedUrl": "<用户复制URL消毒后>（CJK→'?' 合法）",
+        "detectDelta": ">=1（0=复制了非 http(s) 或同 S2 URL → observe-both 重做）",
+        "lastReadOk": "true（false=权限被拒 observe-both）",
+        "probeHandlerFired": "<n>（跨会话累计，>=0 合法）"
+      }
+    },
+    {
+      "step": "S4",
+      "expect": "pickedUri=file://... folderCount=<n>>=1 selectionMode=1 userSelected=file://... tempGone=true",
+      "note": "**保存目录选择+清理观测锚（单步会话，判定取末次 runId）**：pickedUri=picker 返回目录 URI（file:// 前缀，路径段任意合法）；folderCount=recentFolders 回读长度（多轮选择头插累计>1 合法观测）；selectionMode=1（applyPickedFolder 置 Manual——Helpers.cs:318-320 三动作）；userSelected=本次选中 URI（userSelectedDownloadFolder 回读）；tempGone=true（StateStore.removeById 目录级删除复检——mkdir probe-p5u2-<runId>/+两假文件→listFileSync 逐文件 unlinkSync+rmdirSync→accessSync 不存在）。**observe-both 项**：pickedUri=null=用户在 picker 点取消/返回（三键回读保持上次值/0 长度）——重跑 S4 选目录即可，非故障。分支映射：tempGone=false → FAIL 分流 business-code（removeById 链）；errCode=13900032 → FAIL 分流 business-code（rmdirSync 非空=逐文件 unlink 未净）；tempDir 不存在导致的 mkdirSync 异常 → 步骤 errCode/errMessage 行呈现后按 errCode 分流（正常沙箱 tempDir 由 Config 初始化必在，属 business-code）。",
+      "keys": {
+        "pickedUri": "file://<路径>（null=用户取消 observe-both）",
+        "folderCount": ">=1（多轮头插累计>1 合法；取消时 0）",
+        "selectionMode": "1（取消时 -1）",
+        "userSelected": "file://<路径>（null=取消时保持上次值/初始）",
+        "tempGone": "true"
+      }
+    },
+    {
+      "step": "S5",
+      "expect": "checked=<n> total=10 unchecked=<1基项号'/'连接串|none>",
+      "note": "**人工走查清单 10 项发射锚（单步会话）**：checked=勾选数（0~10 环境敏感——人工走查完成度，不做范围判定）；total=10（清单常量）；unchecked=未勾项号 1 基 '/' 连接（全勾时 none）。走查项内容见手册 §5（①弹窗预填/②双锚不重弹/③关闭再弹/④自动开始/⑤目录登记+完成拷贝/⑥工具栏 Open/⑦Open folder 降级/⑧删记录清理/⑨isLive 门/⑩刷新窗停止单发）。本行只发射计数不判内容——项级判定由 verify 对照回贴的走查勾选结果。",
+      "keys": {
+        "checked": "<0~10>（人工走查完成度）",
+        "total": "10",
+        "unchecked": "<项号'/'串|none>"
+      }
+    },
+    {
+      "step": "SUMMARY",
+      "expect": "[SUMMARY] S1=<关键值>|S2=<关键值>|S3=<关键值>|S4=<关键值>|S5=<关键值>",
+      "note": "恰 5 段（各段含关键键：S1=watcherActive/cfgAfter、S2=detectDelta、S3=detectDelta、S4=tempGone、S5=checked）；环形缓冲兜底锚；单行 <1500B（超长时 ProbeKit 两级降级只留各段首 kv——格式仍合法）。"
+    },
+    {
+      "step": "END",
+      "expect": "ok=true steps=<主会话5|单步会话1> elapsedMs=<N>>=0",
+      "note": "ok=true 表示本次会话无脚手架级异常（步骤级 catch 不置 false）；steps 与步骤行数互证（主会话 steps=5 / 单步 steps=1）；ok=false→分流 probe-code。BEGIN/END 按 runId 配对无孤儿（四段会话独立 runId）。主会话 elapsedMs 含 S2 识别段轮询（≤10s 上限）——数秒级属预期；S4 含 picker 人工停留时长（分钟级属预期）。"
+    }
+  ]
+}

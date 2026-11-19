@@ -1,0 +1,50 @@
+{
+  "unitId": "P0-U4",
+  "steps": [
+    {
+      "step": "BEGIN",
+      "expect": "runId=<HHmmss> filesDir=<nonempty sandbox path>",
+      "note": "完整会话 S1-S6 各一条、SUMMARY 和 END 各一条，按最后一轮完整会话核验。标记只记录事实，不能自报 PASS/FAIL。"
+    },
+    {
+      "step": "S1",
+      "expect": "apiVersion=1 ffmpeg=6.0 lame=3.100 abi=<arm64-v8a|x86_64 matching actual device> mp4=true matroska=true mp3=true maxActiveJobs=1 inputs=3 detailFile=<existing JSON>",
+      "note": "JSON inputs 的三个 SHA256 应与 rawfile/native-media/manifest.json 相同，实际 ABI 与 HAP/设备交叉确认。不能用 host-test ABI 验收设备运行。"
+    },
+    {
+      "step": "S2",
+      "expect": "status=success error=NONE format=mp4 reportedBytes=<positive> fileBytes=<same as reportedBytes> durationMs=<about 2000> sha256=<actual output hash> detailFile=<existing JSON>",
+      "note": "外部 ffprobe/解码必须确认 H264 160x96 + AAC 44100 Hz mono，约 2 秒、DTS 单调、视频帧/音频 PCM 与输入内容相同；还需目标播放证据。非零大小不单独构成通过。"
+    },
+    {
+      "step": "S3",
+      "expect": "status=success error=NONE format=mp3 reportedBytes=<positive> fileBytes=<same as reportedBytes> durationMs=<about 1000> sha256=<actual output hash> detailFile=<existing JSON>",
+      "note": "外部分析/解码确认 MP3 44100 Hz mono、约 1 秒可听 440 Hz 信号；采样时长按有效解码样本与编码延迟/填充解释，内容非静音且无截尾；还需目标播放证据。"
+    },
+    {
+      "step": "S4",
+      "expect": "status=success error=NONE format=matroska reportedBytes=<positive> fileBytes=<same as reportedBytes> firstStatus=failed firstError=UNSUPPORTED_STREAM rejectedExists=false fallbackMp4Exists=false detailFile=<existing JSON>",
+      "note": "真实 MP4 对 PCM16 的不兼容触发封装器重试；最终应为 H264 + PCM16 两轨 MKV，解码内容与视频和 WAV 输入相等，失败 MP4 不残留。不能用 mock error 或改扩展名代替。"
+    },
+    {
+      "step": "S5",
+      "expect": "missingError=INPUT_NOT_FOUND invalidError=INVALID_DATA existingError=OUTPUT_EXISTS existingUnchanged=true failedOutputsExist=false queuedPhase=queued queuedAccepted=true queuedStatus=cancelled queuedOutputExists=false processedBeforeCancelMs>0 activeAccepted=true activeStatus=cancelled activeOutputExists=false stableInputs=3 longInputUnchanged=true detailFile=<existing JSON>",
+      "note": "activePhase 是实际原子快照，可能在读取/解码/重采样/编码/写出之间变化；只要已处理音频且取消受理，必须最终 cancelled 并完成清理。activeAccepted=false 且已成功提交不构成代码故障，但本轮取消覆盖缺失，应保持 UNVERIFIED 并重跑。以导出目录和 SHA256 验证输入、长 WAV、哨兵未被修改。"
+    },
+    {
+      "step": "S6",
+      "expect": "operations=20 completed=20 workHeartbeatTicks>0 maxHeartbeatGapMs<1000 callbacksAfterCompletion=0 lastJobFound=false lateCancelAccepted=false detailFile=<existing JSON>",
+      "note": "progressCallbacks 允许为 0（每个短作业可在一秒轮询前完成）。结束后等待 1200 ms 无回调；20 个结果各自为真成功文件并可分析/解码。心跳是响应性观察，不等价于内存测量或所有平台计时器资源证明。"
+    },
+    {
+      "step": "SUMMARY",
+      "expect": "六段 S1-S6，与步骤行观测一致",
+      "note": "ProbeKit 可因长度限制作首键降级；完整事实以步骤行和 detail JSON 为准。"
+    },
+    {
+      "step": "END",
+      "expect": "ok=true steps=6 elapsedMs>=0",
+      "note": "仅证明脚手架完成。U0.4 GO 仍要求实际设备 ABI、媒体产物、取消/回退和目标播放证据，不能由 host 测试或编译代替。"
+    }
+  ]
+}

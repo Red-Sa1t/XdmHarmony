@@ -1,0 +1,19 @@
+This directory contains unmodified FFmpeg n6.0 and LAME 3.100 headers and static
+position-independent libraries compiled for OpenHarmony, not host executables.
+
+FFmpeg: Copyright (c) the FFmpeg developers. LGPL version 2.1 or later for the
+selected configuration. See licenses/FFmpeg-COPYING.LGPLv2.1.
+LAME: Copyright (c) the LAME developers. LGPL version 2 or later.
+See licenses/LAME-COPYING.
+
+No GPL, nonfree, or version3 FFmpeg components are enabled in this configuration.
+The surrounding XDM-derived application retains its own GPL-2.0 obligations.
+
+build-manifest.json identifies the exact source archives, SHA512, target triples,
+configuration and every packaged header/library SHA256. tools/native contains
+the reproducible build entry points. Upstream C/configure sources were not edited;
+the only compatibility adaptation is in the host compiler path wrapper.
+
+Source archives and build/relink materials must accompany a source distribution
+or be made available as required by the applicable licenses. These notices do
+not replace those license obligations.

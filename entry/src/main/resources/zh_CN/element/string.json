@@ -1,0 +1,924 @@
+{
+  "string": [
+    {
+      "name": "module_desc",
+      "value": "多线程下载管理器，支持浏览器接管与视频下载"
+    },
+    {
+      "name": "EntryAbility_desc",
+      "value": "XDM下载管理器主窗口"
+    },
+    {
+      "name": "EntryAbility_label",
+      "value": "XDM下载管理器"
+    },
+    {
+      "name": "probe_index_title",
+      "value": "XDM 迁移探针"
+    },
+    {
+      "name": "probe_index_empty",
+      "value": "暂无探针单元"
+    },
+    {
+      "name": "probe_env_title",
+      "value": "环境自检（P0-U0）"
+    },
+    {
+      "name": "probe_run_all",
+      "value": "运行全部"
+    },
+    {
+      "name": "probe_rerun",
+      "value": "重跑"
+    },
+    {
+      "name": "probe_step_run",
+      "value": "执行"
+    },
+    {
+      "name": "probe_copy_log",
+      "value": "复制日志"
+    },
+    {
+      "name": "probe_copied",
+      "value": "已复制"
+    },
+    {
+      "name": "probe_back",
+      "value": "返回"
+    },
+    {
+      "name": "probe_status_pending",
+      "value": "待运行"
+    },
+    {
+      "name": "probe_status_running",
+      "value": "运行中"
+    },
+    {
+      "name": "probe_status_done",
+      "value": "已完成"
+    },
+    {
+      "name": "probe_status_error",
+      "value": "出错"
+    },
+    {
+      "name": "probe_http_title",
+      "value": "HTTP 能力探针（P0-U2）"
+    },
+    {
+      "name": "probe_http_source_hint",
+      "value": "测试源地址（主机局域网 IP，如 http://192.168.1.20:8080）"
+    },
+    {
+      "name": "probe_p1u1_title",
+      "value": "数据层探针（P1-U1）"
+    },
+    {
+      "name": "probe_p1u1_persist_hint",
+      "value": "点击 S8 写入重启持久行，然后杀进程重启应用"
+    },
+    {
+      "name": "probe_p1u1_verify_hint",
+      "value": "重启拉起本页后点击 S9 核对持久行"
+    },
+    {
+      "name": "nd_title",
+      "value": "新建下载"
+    },
+    {
+      "name": "nd_address",
+      "value": "地址"
+    },
+    {
+      "name": "nd_file",
+      "value": "文件"
+    },
+    {
+      "name": "lbl_save_in",
+      "value": "保存到"
+    },
+    {
+      "name": "nd_download_now",
+      "value": "现在下载"
+    },
+    {
+      "name": "nd_cancel",
+      "value": "取消"
+    },
+    {
+      "name": "msg_invalid_url",
+      "value": "下载地址无效或不受支持"
+    },
+    {
+      "name": "msg_no_file",
+      "value": "请输入文件名"
+    },
+    {
+      "name": "lbl_active",
+      "value": "进行中"
+    },
+    {
+      "name": "lbl_complete",
+      "value": "已完成"
+    },
+    {
+      "name": "probe_p1u2_title",
+      "value": "下载链路探针（P1-U2）"
+    },
+    {
+      "name": "probe_p1u2_source_hint",
+      "value": "测试源地址（主机局域网 IP，如 http://192.168.1.20:8080）"
+    },
+    {
+      "name": "probe_p1u2_restart_hint",
+      "value": "完成后杀进程重启应用，再回到本页点击 S9 核对历史"
+    },
+    {
+      "name": "probe_p2u1_title",
+      "value": "下载链路探针（P2-U1）"
+    },
+    {
+      "name": "probe_p2u1_source_hint",
+      "value": "测试源地址（主机局域网 IP，如 http://192.168.1.20:8080）"
+    },
+    {
+      "name": "probe_p2u1_pause_hint",
+      "value": "S5 使用慢速源 /slow.bin?ms=80 扩大暂停窗口；完成后可重跑 S2"
+    },
+    {
+      "name": "probe_p2u2_title",
+      "value": "断点续传探针（P2-U2）"
+    },
+    {
+      "name": "probe_p2u2_source_hint",
+      "value": "测试源地址（主机局域网 IP，如 http://192.168.1.20:8080）"
+    },
+    {
+      "name": "probe_p2u2_restart_hint",
+      "value": "S1~S3 跑完后按手册 force-stop 重启，再进本页点 S4（慢源 /slow.bin?ms=600）"
+    },
+    {
+      "name": "probe_p3u1_title",
+      "value": "P3-U1 队列调度探针"
+    },
+    {
+      "name": "probe_p3u1_source_hint",
+      "value": "测试源地址（主机局域网 IP，禁 127.0.0.1）"
+    },
+    {
+      "name": "probe_p3u2_title",
+      "value": "P3-U2 限速+定时调度探针"
+    },
+    {
+      "name": "probe_p3u2_source_hint",
+      "value": "测试源地址（主机局域网 IP，禁 127.0.0.1）"
+    },
+    {
+      "name": "desc_new",
+      "value": "新建"
+    },
+    {
+      "name": "desc_del",
+      "value": "删除"
+    },
+    {
+      "name": "ctx_open_file",
+      "value": "打开"
+    },
+    {
+      "name": "ctx_open_folder",
+      "value": "打开目录"
+    },
+    {
+      "name": "menu_pause",
+      "value": "暂停"
+    },
+    {
+      "name": "menu_resume",
+      "value": "恢复"
+    },
+    {
+      "name": "lbl_search",
+      "value": "搜索"
+    },
+    {
+      "name": "sort_name",
+      "value": "名称"
+    },
+    {
+      "name": "sort_date",
+      "value": "时间"
+    },
+    {
+      "name": "sort_size",
+      "value": "大小"
+    },
+    {
+      "name": "sort_status",
+      "value": "状态"
+    },
+    {
+      "name": "stat_downloading",
+      "value": "下载中"
+    },
+    {
+      "name": "stat_stopped",
+      "value": "已终止"
+    },
+    {
+      "name": "stat_finished",
+      "value": "已完成"
+    },
+    {
+      "name": "stat_waiting",
+      "value": "等待中"
+    },
+    {
+      "name": "settings_monitoring",
+      "value": "浏览器监视"
+    },
+    {
+      "name": "desc_q_title",
+      "value": "队列和计划"
+    },
+    {
+      "name": "lbl_support_page",
+      "value": "帮助页"
+    },
+    {
+      "name": "menu_delete_completed",
+      "value": "移除已完成的任务"
+    },
+    {
+      "name": "lbl_new_download",
+      "value": "新建下载"
+    },
+    {
+      "name": "lbl_video_download",
+      "value": "下载视频"
+    },
+    {
+      "name": "menu_batch_download",
+      "value": "批量下载"
+    },
+    {
+      "name": "title_settings",
+      "value": "设置"
+    },
+    {
+      "name": "msg_media_capture",
+      "value": "媒体抓取"
+    },
+    {
+      "name": "menu_export",
+      "value": "导出"
+    },
+    {
+      "name": "menu_import",
+      "value": "导入"
+    },
+    {
+      "name": "menu_lang",
+      "value": "语言"
+    },
+    {
+      "name": "lbl_report_problem",
+      "value": "报告错误"
+    },
+    {
+      "name": "menu_update",
+      "value": "检查更新"
+    },
+    {
+      "name": "menu_about",
+      "value": "关于XDM..."
+    },
+    {
+      "name": "menu_exit",
+      "value": "退出"
+    },
+    {
+      "name": "cat_documents",
+      "value": "文档"
+    },
+    {
+      "name": "cat_music",
+      "value": "音乐"
+    },
+    {
+      "name": "cat_videos",
+      "value": "视频"
+    },
+    {
+      "name": "cat_compressed",
+      "value": "压缩"
+    },
+    {
+      "name": "cat_programs",
+      "value": "程序"
+    },
+    {
+      "name": "btn_cancel_queue",
+      "value": "取消队列"
+    },
+    {
+      "name": "probe_p4u1_title",
+      "value": "P4-U1 主窗口走查探针"
+    },
+    {
+      "name": "probe_p4u1_source_hint",
+      "value": "测试源地址（主机局域网 IP，禁 127.0.0.1）"
+    },
+    {
+      "name": "probe_p4u1_check_hint",
+      "value": "主页面走查完成后逐项勾选，再点击 S4 执行"
+    },
+    {
+      "name": "probe_p4u2_title",
+      "value": "P4-U2 对话框包走查探针"
+    },
+    {
+      "name": "probe_p4u2_source_hint",
+      "value": "测试源地址（主机局域网 IP，禁 127.0.0.1；S3 需 /slow.bin?ms=300）"
+    },
+    {
+      "name": "probe_p4u2_check_hint",
+      "value": "主页面逐对话框走查完成后勾选 26 项，再单步执行 S5"
+    },
+    {
+      "name": "btn_stop_processing",
+      "value": "停止"
+    },
+    {
+      "name": "dwn_hide",
+      "value": "隐藏"
+    },
+    {
+      "name": "msg_dwn_stop",
+      "value": "下载已停止"
+    },
+    {
+      "name": "stat_assembling",
+      "value": "组装中"
+    },
+    {
+      "name": "msg_time_left",
+      "value": "剩余时间"
+    },
+    {
+      "name": "lbl_show_progress",
+      "value": "显示进度"
+    },
+    {
+      "name": "speed_limit_title",
+      "value": "速度限制"
+    },
+    {
+      "name": "msg_no_speed_limit",
+      "value": "不限速"
+    },
+    {
+      "name": "menu_speed_limiter",
+      "value": "速度限制"
+    },
+    {
+      "name": "msg_speed_limit",
+      "value": "下载限速[KB/s](0为不限速)"
+    },
+    {
+      "name": "bat_select_items",
+      "value": "选择要下载的项目"
+    },
+    {
+      "name": "vid_chk",
+      "value": "全选/取消全选"
+    },
+    {
+      "name": "nd_more",
+      "value": "更多..."
+    },
+    {
+      "name": "nd_download_later",
+      "value": "过后下载"
+    },
+    {
+      "name": "lbl_queue_opt3",
+      "value": "不使用队列"
+    },
+    {
+      "name": "msg_cat_folder_missing",
+      "value": "未填写保存位置"
+    },
+    {
+      "name": "bat_pattern",
+      "value": "选项"
+    },
+    {
+      "name": "bat_links",
+      "value": "链接"
+    },
+    {
+      "name": "bat_paste_link",
+      "value": "请将下载链接粘贴在下方"
+    },
+    {
+      "name": "bat_leading_zero",
+      "value": "在前方补零"
+    },
+    {
+      "name": "lbl_batch_desc",
+      "value": "使用通配符(*)下载一系列文件(例如http://xdman.sourceforge.net/images/edge*.png)"
+    },
+    {
+      "name": "lbl_batch_asterisk",
+      "value": "将星号替换为"
+    },
+    {
+      "name": "lbl_batch_letter",
+      "value": "字母"
+    },
+    {
+      "name": "lbl_batch_num",
+      "value": "数字"
+    },
+    {
+      "name": "lbl_batch_from",
+      "value": "起始于"
+    },
+    {
+      "name": "lbl_batch_to",
+      "value": "终止于"
+    },
+    {
+      "name": "lbl_batch_file1",
+      "value": "第一个文件"
+    },
+    {
+      "name": "lbl_batch_file2",
+      "value": "第二个文件"
+    },
+    {
+      "name": "lbl_batch_filen",
+      "value": "最后一个文件"
+    },
+    {
+      "name": "msg_ok",
+      "value": "确定"
+    },
+    {
+      "name": "menu_refresh_link",
+      "value": "刷新链接"
+    },
+    {
+      "name": "ref_waiting_for_link",
+      "value": "正在等待下载链接..."
+    },
+    {
+      "name": "msg_ref_link_msg",
+      "value": "新下载链接已接收"
+    },
+    {
+      "name": "no_refresh_link",
+      "value": "链接刷新对此下载任务不可用"
+    },
+    {
+      "name": "nd_auth",
+      "value": "登录信息"
+    },
+    {
+      "name": "desc_user",
+      "value": "用户名"
+    },
+    {
+      "name": "desc_pass",
+      "value": "密码"
+    },
+    {
+      "name": "msg_no_username",
+      "value": "需要用户名"
+    },
+    {
+      "name": "menu_delete_dwn",
+      "value": "删除下载"
+    },
+    {
+      "name": "del_sel_text",
+      "value": "确定删除选定的下载任务?"
+    },
+    {
+      "name": "lbl_delete_file",
+      "value": "同时从磁盘删除"
+    },
+    {
+      "name": "cd_title",
+      "value": "下载完成"
+    },
+    {
+      "name": "msg_dont_show_again",
+      "value": "不再显示"
+    },
+    {
+      "name": "desc_adv_title",
+      "value": "高级设置"
+    },
+    {
+      "name": "desc_net4",
+      "value": "代理设置"
+    },
+    {
+      "name": "nd_no_proxy",
+      "value": "不使用代理"
+    },
+    {
+      "name": "nd_manual_proxy",
+      "value": "手动配置"
+    },
+    {
+      "name": "proxy_host",
+      "value": "地址"
+    },
+    {
+      "name": "proxy_port",
+      "value": "端口"
+    },
+    {
+      "name": "net_system_proxy",
+      "value": "使用系统代理设置"
+    },
+    {
+      "name": "settings_general",
+      "value": "通用设置"
+    },
+    {
+      "name": "settings_network",
+      "value": "网络设置"
+    },
+    {
+      "name": "settings_cred",
+      "value": "密码管理"
+    },
+    {
+      "name": "settings_adv",
+      "value": "高级设置"
+    },
+    {
+      "name": "desc_save_q",
+      "value": "保存"
+    },
+    {
+      "name": "desc_filetypes",
+      "value": "XDM将自动从浏览器接管下载以下类型的文件"
+    },
+    {
+      "name": "desc_def",
+      "value": "默认"
+    },
+    {
+      "name": "desc_videotypes",
+      "value": "当浏览器播放以下格式的视频时，XDM将自动显示下载选项："
+    },
+    {
+      "name": "lbl_min_video_size",
+      "value": "下载视频的最小体积"
+    },
+    {
+      "name": "desc_siteexceptions",
+      "value": "不自动从以下网站捕获下载"
+    },
+    {
+      "name": "menu_clip_add",
+      "value": "监视剪贴板"
+    },
+    {
+      "name": "lbl_get_timestamp",
+      "value": "从服务器获取时间戳"
+    },
+    {
+      "name": "msg_show_media_notification",
+      "value": "显示视频下载通知"
+    },
+    {
+      "name": "show_dwn_prg",
+      "value": "显示下载进度窗口"
+    },
+    {
+      "name": "show_dwn_complete",
+      "value": "显示下载完成窗口"
+    },
+    {
+      "name": "lbl_start_auto",
+      "value": "自动开始下载"
+    },
+    {
+      "name": "lbl_overwrite_existing",
+      "value": "覆盖已有文件"
+    },
+    {
+      "name": "lbl_temp_folder",
+      "value": "缓存文件夹"
+    },
+    {
+      "name": "msg_max_download",
+      "value": "最大并发数"
+    },
+    {
+      "name": "settings_auto_cat",
+      "value": "根据文件类型自动选择保存位置"
+    },
+    {
+      "name": "settings_folder",
+      "value": "默认保存位置"
+    },
+    {
+      "name": "settings_dark_theme",
+      "value": "使用深色主题(如果可能)"
+    },
+    {
+      "name": "settings_cat",
+      "value": "下载类别"
+    },
+    {
+      "name": "settings_cat_name",
+      "value": "类别名"
+    },
+    {
+      "name": "settings_cat_types",
+      "value": "文件类型"
+    },
+    {
+      "name": "settings_cat_folder",
+      "value": "保存到"
+    },
+    {
+      "name": "settings_cat_add",
+      "value": "添加"
+    },
+    {
+      "name": "settings_cat_edit",
+      "value": "编辑"
+    },
+    {
+      "name": "msg_double_click_action",
+      "value": "双击下载项"
+    },
+    {
+      "name": "msg_open_file",
+      "value": "打开文件"
+    },
+    {
+      "name": "btn_browse",
+      "value": "浏览..."
+    },
+    {
+      "name": "msg_halt",
+      "value": "完成全部下载后关闭电脑"
+    },
+    {
+      "name": "msg_awake",
+      "value": "下载时阻止电脑休眠与睡眠"
+    },
+    {
+      "name": "exec_cmd",
+      "value": "完成全部下载后运行该程序"
+    },
+    {
+      "name": "exe_anti_vir",
+      "value": "下载后使用防病毒软件扫描文件"
+    },
+    {
+      "name": "antivir_cmd",
+      "value": "防病毒软件路径"
+    },
+    {
+      "name": "antivir_args",
+      "value": "命令行参数"
+    },
+    {
+      "name": "auto_start",
+      "value": "开机时启动XDM"
+    },
+    {
+      "name": "msg_fallback_ua",
+      "value": "用户代理(如果手动添加下载任务)"
+    },
+    {
+      "name": "desc_net1",
+      "value": "连接超时时间(以秒为单位)"
+    },
+    {
+      "name": "desc_net2",
+      "value": "下载分段数"
+    },
+    {
+      "name": "net_max_retry",
+      "value": "最大重试次数"
+    },
+    {
+      "name": "desc_host",
+      "value": "网站"
+    },
+    {
+      "name": "desc_net7",
+      "value": "用户名"
+    },
+    {
+      "name": "desc_net8",
+      "value": "密码"
+    },
+    {
+      "name": "msg_host_name_missing",
+      "value": "未填写主机名"
+    },
+    {
+      "name": "msg_cat_name_missing",
+      "value": "未填写类别名"
+    },
+    {
+      "name": "msg_cat_file_types_missing",
+      "value": "未填写文件类型"
+    },
+    {
+      "name": "msg_lang1",
+      "value": "选择语言"
+    },
+    {
+      "name": "lang_follow_system",
+      "value": "跟随系统"
+    },
+    {
+      "name": "lang_chinese",
+      "value": "中文"
+    },
+    {
+      "name": "lang_english",
+      "value": "英语"
+    },
+    {
+      "name": "probe_p4u3_title",
+      "value": "P4-U3 设置页走查探针"
+    },
+    {
+      "name": "probe_p4u3_check_hint",
+      "value": "设置页逐项走查完成后勾选 31 项，再单步执行 S5"
+    },
+    {
+      "name": "notify_finished_title",
+      "value": "下载完成"
+    },
+    {
+      "name": "probe_p5u1_title",
+      "value": "P5-U1 后台任务+通知探针"
+    },
+    {
+      "name": "probe_p5u1_check_hint",
+      "value": "按手册完成后台存活走查（关窗→等待→恢复）后单步执行 S5"
+    },
+    {
+      "name": "clipboard_permission_reason",
+      "value": "用于检测复制的下载链接"
+    },
+    {
+      "name": "msg_file_not_found",
+      "value": "文件已被移动、重命名或删除"
+    },
+    {
+      "name": "no_item_selected",
+      "value": "请选择要打开的项目"
+    },
+    {
+      "name": "msg_copy_failed",
+      "value": "无法拷贝到所选文件夹，文件已保留在应用 Downloads 目录"
+    },
+    {
+      "name": "msg_folder_picked",
+      "value": "已登记保存目录，完成的下载将拷贝到该目录"
+    },
+    {
+      "name": "probe_p5u2_title",
+      "value": "P5-U2 剪贴板+保存目录探针"
+    },
+    {
+      "name": "probe_p5u2_check_hint",
+      "value": "按手册完成剪贴板识别/保存目录/文件打开走查 10 项后单步执行 S5"
+    },
+    {
+      "name": "probe_p0u3_title",
+      "value": "扩展桥 8597 服务端探针（P0-U3）"
+    },
+    {
+      "name": "probe_p0u3_hint",
+      "value": "S3 需主机侧配合：先执行 hdc fport tcp:18597 tcp:8597，再 curl http://127.0.0.1:18597/sync（全套命令见手册），完成后回探针页点 S3\"执行\"复核"
+    },
+    {
+      "name": "probe_p6u1_title",
+      "value": "扩展桥八路由探针（P6-U1）"
+    },
+    {
+      "name": "probe_p6u1_hint",
+      "value": "S1~S9 全自动；主机侧自验=Node 脚本（手册 AI 自动轨），人工兜底=curl 命令集见手册；未知路径\"连接关闭且零应答字节=正确\""
+    },
+    {
+      "name": "msg_quality",
+      "value": "质量"
+    },
+    {
+      "name": "msg_download",
+      "value": "下载"
+    },
+    {
+      "name": "msg_clear",
+      "value": "清除"
+    },
+    {
+      "name": "msg_close",
+      "value": "关闭"
+    },
+    {
+      "name": "probe_p6u2_title",
+      "value": "嗅探规则链+视频捕获探针（P6-U2）"
+    },
+    {
+      "name": "probe_p6u2_hint",
+      "value": "S1~S8 全自动；规则链用例表主机侧自验=node docs/probe/P6-U2-sniff-cases.js（SUMMARY pass=65 退出码 0）；捕获页走查=菜单打开媒体抓取页核对分组/全选/下载/清空（清单见手册）"
+    },
+    {
+      "name": "msg_download_save_failed",
+      "value": "保存下载失败，请重试。"
+    },
+    {
+      "name": "msg_video_download_unavailable",
+      "value": "暂不支持下载此视频格式。"
+    },
+    {
+      "name": "msg_refresh_save_failed",
+      "value": "更新下载链接失败。请重新发送链接，或停止等待。"
+    },
+    {
+      "name": "msg_refresh_browser_failed",
+      "value": "无法打开来源网页。请在浏览器中重新触发此下载。"
+    },
+    {
+      "name": "probe_p6u3_title",
+      "value": "链接刷新与持久化探针（P6-U3）"
+    },
+    {
+      "name": "probe_p0u4_title",
+      "value": "原生媒体处理探针（P0-U4）"
+    },
+    {
+      "name": "probe_p6u4_title",
+      "value": "自适应状态与清单探针（P6-U4）"
+    },
+    {
+      "name": "probe_p6u5_title",
+      "value": "自适应流式下载与组装探针（P6-U5）"
+    },
+    {
+      "name": "probe_p6u6_title",
+      "value": "自适应运行控制与续传探针（P6-U6）"
+    },
+    {
+      "name": "probe_p7u1_foundation_title",
+      "value": "DASH 解析纯函数探针（P7-U1-F）"
+    },
+    {
+      "name": "probe_p7u1_pipeline_title",
+      "value": "DASH 管线下载与组装探针（P7-U1-P）"
+    },
+    {
+      "name": "probe_p7u1_controller_title",
+      "value": "DASH 运行控制与续传探针（P7-U1-C）"
+    },
+    {
+      "name": "empty_finished",
+      "value": "暂无已完成下载"
+    },
+    {
+      "name": "empty_in_progress",
+      "value": "暂无进行中下载"
+    },
+    {
+      "name": "about_title",
+      "value": "关于 XDM"
+    },
+    {
+      "name": "about_text",
+      "value": "版本 %s\n\nXDM下载管理器基于 subhra74 的开源项目 Xtreme Download Manager（XDM）修改开发。\n\n本程序为自由软件，依据 GNU 通用公共许可证第 2 版（GPL-2.0）发布，不提供任何担保。\n\n源代码：https://gitcode.com/Red_Salt/XdmHarmony\n上游项目：https://github.com/subhra74/xdm"
+    },
+    {
+      "name": "remove_finished_confirm",
+      "value": "从列表中移除所有已完成的任务？磁盘上已下载的文件会保留。"
+    },
+    {
+      "name": "btn_ok",
+      "value": "确定"
+    },
+    {
+      "name": "app_name",
+      "value": "XDM下载管理器"
+    }
+  ]
+}

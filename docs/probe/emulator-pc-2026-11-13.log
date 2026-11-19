@@ -1,0 +1,72 @@
+# PC (2in1) emulator acceptance, 2026-11-13 (real-device lease expired)
+# Emulator: DevEco Emulator 6.1.1.350, instance "MateBook Pro" (pc_all_x86 image, HarmonyOS 6.1.1 API 24),
+#   param: const.product.devicetype=2in1, apiversion=24, software "emulator 6.1.0.125(SP12DEVC00E47R1P3)", abilist x86_64,
+#   3120x2080 (same as the rented HAD-W24). Started with `Emulator.exe -start "MateBook Pro"`; hdc target 127.0.0.1:5555.
+# App: x86_64 native libs (libxdm_media.so) already packaged. First launch showed the system notification-permission
+#   prompt for our app; allowed on this test emulator (needed for completion notifications).
+# Driver: docs/probe/e2e/e2e-driver.cjs + ui.cjs; sources: docs/probe/E2E-adaptive-host.cjs on 18800 / 18810 (6 KB/s).
+
+## Downloads (decode/byte comparison on host)
+PASS http        :: source.mp4 via HTTP engine, md5 c0d3be69b293fe8e2409a14b7e747161 == source
+PASS hls-ts      :: EMU-HLS.ts 955040 B == concat of 10 segments (byte-identical)
+PASS hls-dual    :: EMU-HLS.mp4 native remux on x86_64; video decode md5 == source, audio decode md5 == HLS audio rendition
+PASS dash        :: EMU-DASH.mp4 video md5 9823e36fff60b0c882bf6f4df16cc2b8 == source; audio PCM prefix-equal to DASH reference, trim 1041 samples (same as device)
+FAIL->PASS killresume (first run is a test-timing artifact, not a product failure):
+   run 1 killed at 14 s: no segment had sealed yet (each ~16 s at 6 KB/s) -> restart refetched all 10 segments, no manifest; output byte-identical (O5b limit as registered)
+   run 2 killed at 26 s: restart showed 50%; requests after restart seg001 seg003 seg005 seg007 seg009 only (no manifest); output byte-identical
+PASS pause       :: paused row Stopped/Resume at 72%; requests while paused 23->23; resume fetched 6 unfinished media chunks only (no mpd, no init); video md5 == source
+PASS pubdash     :: Akamai bbb_30fps 180p: 21210186 B, 634.566667 s, decode errors none; video md5 9818f1b98846fa24753dcb7074c68404 (== real-device result)
+PASS pubhls      :: Mux x36xhzz 240p: 22418060 B, 634.633333 s, decode errors none; md5 d3888da6aa50f2ef29494310403e20d6 (== real-device result)
+
+## UI (screenshots, light + dark)
+Dark mode via a temporary test build forcing COLOR_MODE_DARK in EntryAbility (reverted; system settings untouched).
+Found and fixed:
+ - dark: category icons, file-type row icons and toolbar search/menu glyphs stayed black on dark background (the reported
+   "background and text the same colour") -> SymbolGlyph fontColor text_primary
+ - empty-list placeholders hard-coded in Chinese under the English UI -> string resources empty_finished/empty_in_progress
+ - unknown ETA rendered "Time left: 00:00:00" -> "---"
+ - non-modal Download Complete window had no close control and followed the user across pages -> Close button
+Re-checked dark: main window, New Download, progress window, Download Complete, Settings (General/Network), Media grabber: readable.
+
+## Gates after fixes
+host suite 629: pass 624 / fail 0 / skipped 5
+Hypium HYPIUM_GATE ok:true 642/642 runDir 2026-11-13T11-11-00-867Z-1b1cee41-80c0-4657-a474-094b69c01fd1
+release: entry-default-signed.hap 9,023,554 B sha256 6508a2a7abfe409e6c414b1dbbf91f073efe70f8e395a49a0ed5a06a3686b59e; 21 entries, no sourceMaps;
+  installed on the emulator, start successfully, pid alive, no crash log
+
+## Not covered by the emulator (left for a real-device session)
+ - real network paths (e.g. the CDN-edge sporadic 404 seen on the device), performance and thermal behaviour
+ - PC picker / user-folder grant persistence on real hardware, background keep-alive and notification centre on hardware
+ - browser-extension capture from a real browser page (bridge exercised via HTTP POST here, same as device runs)
+
+# ===================== 2026-11-19 full functional check before store submission =====================
+# Driver: docs/probe/e2e/probe-hosts.cjs (6 sources) + probe-run.cjs + baseline-diff.cjs vs probe-session-2026-10-18.log
+## Probe units (all PASS)
+P0-U2 P0-U3 P0-U4 P1-U1(S8->restart->S9) P1-U2 P2-U1 P2-U2 P3-U1 P3-U2 P4-U1 P4-U2 P4-U3 P5-U1(window closed, 0->12%)
+P5-U2 P6-U1 P6-U2 P6-U3 P6-U4 P6-U5 P6-U6 P7-U1-F P7-U1-P P7-U1-C (same as baseline)
+probe fixes: P4-U3 S3 readback vars unassigned; P1-U2 S7 ignored accessSync's return value -> tempDirGone now true
+## UI walkthrough
+PASS new menu, batch, language, settings tabs+save, category filter, sort, delete with/without files, row pause/resume, inbox
+FIXED Open file crashed (filePreview missing on 2in1 image) -> fallback to system open-with (viewData)
+FIXED Language Select rendered blank -> explicit value
+FIXED multi-delete / remove-finished removed only part (concurrent IMMEDIATE tx, errCode 14800015) -> sequential; 15/15 and 6/6, persisted after restart
+STORE disabled placeholders removed (export/import, help, report, check update, video wizard, queue/scheduler);
+      Remove finished downloads + About (version, GPL-2.0, upstream, source link) implemented; root LICENSE added
+## Gates
+host 630: pass 625 / fail 0 / skipped 5;  Hypium ok:true 642/642 runDir 2026-11-19T03-54-41-684Z-9444b85f
+release entry-default-signed.hap 9,025,691 B sha256 dc49715c89ce73969b575a61abbf693d80bb396f472fcfa34b25707d8687880a
+  installed on emulator; 'aa start --ps page probe' -> main window, hilog "page=probe ignored in release build"
+
+## 2026-11-19 evening: rebrand + engine fix
+rename: XDM下载管理器 / XDM Download Manager (title bar, taskbar, recent tasks verified); original layered icon
+FIXED engine re-download: progress via Task.sendData inside setInterval throws -> reportDisabled -> splits decided on
+  downloaded=0 -> nearly-finished pieces re-fetched (1.2GB file: temp 3031MB; 2.4GB: 3.8GB, disk full).
+  Now SharedArrayBuffer (bytes written + cancel flag) polled every 250 ms and before splits.
+  300MB @2MB/s/conn: temp peak 301MB (was 370MB); 500MB pause->resume md5 8241e8a2... == expected;
+  500MB force-stop->restart->resume from 92% md5 == expected; probes P1-U2 P2-U1 P2-U2(S4) P3-U1 P3-U2 == baseline
+FIXED runtime language switch (status column + progress windows), progress window left open after delete,
+  long URL ellipsis in progress window
+env notes: hdc rport tunnels jam under many long-lived slow streams (fresh forwards fail too; 'hdc kill -r' resets);
+  emulator /data is ~5.7GB and completed files are also copied to the user folder chosen in settings
+gates: host 630/625/0/5, Hypium 642/642 (runDir 2026-11-19T11-08-50-654Z-15d23d22)
+release: entry-default-signed.hap 8,993,885 B sha256 590cf6cb878d80fbf71707b4a40a1fff15fdce8d3e0d8cf9bad2d110be3ef9bd

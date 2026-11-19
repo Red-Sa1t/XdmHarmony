@@ -1,0 +1,53 @@
+{
+  "unitId": "P7-U1",
+  "executionStatus": "pending-device-run",
+  "remark": "U7.1 合并预期表：一个迁移单元三个探针入口（P7-U1-F/P7-U1-P/P7-U1-C），共用主机源 docs/probe/P7-U1-dash-host.cjs(:8795)。step 字段用复合编号：前缀 F-/P-/C- 经 probes 映射到日志标记的单元 ID（如 F-S1 对应日志行 [XDM_PROBE][P7-U1-F][S1]，每条 note 首部给出标记锚）。本表与 PROBE-u7-1-dash.md 第 4 节步骤表一一对应（17 个步骤行 + 每探针 BEGIN/SUMMARY/END 保留行）。期望值只写观测事实判据：<实测> 等尖括号占位符表示随运行/设备变化的值，只验存在性与合理性。逐单元判据细版见各 probes.*.expect 分册文件；判定一律以 xdm-probe-verify 对照日志为准，探针代码内不含任何 PASS/FAIL 判定。",
+  "probes": {
+    "P7-U1-F": {
+      "manual": "docs/probe/PROBE-u7-1-dash-foundation.md",
+      "expect": "docs/probe/EXPECT-u7-1-dash-foundation.json",
+      "needsHostSource": false,
+      "steps": "S1-S6"
+    },
+    "P7-U1-P": {
+      "manual": "docs/probe/PROBE-u7-1-dash-pipeline.md",
+      "expect": "docs/probe/EXPECT-u7-1-dash-pipeline.json",
+      "needsHostSource": true,
+      "steps": "S1-S6"
+    },
+    "P7-U1-C": {
+      "manual": "docs/probe/PROBE-u7-1-dash-controller.md",
+      "expect": "docs/probe/EXPECT-u7-1-dash-controller.json",
+      "needsHostSource": true,
+      "steps": "S1-S5"
+    }
+  },
+  "steps": [
+    {"step": "F-BEGIN", "expect": "runId=<HHmmss> filesDir=<沙箱files路径>", "note": "标记锚 [XDM_PROBE][P7-U1-F][BEGIN]。一次完整运行；F 全离线（四个 MPD 向量行内注入自 DashSanityTest.cs），无需主机源。"},
+    {"step": "F-S1", "expect": "eventCount=<实测> rootName=MPD rootAttrCount=6 ignoreNameSpaceNames=1 nodeCount=189 maxDepth=6 attrCallbackOrder=<实测钉板> selfClosingCount=176", "note": "标记锚 [XDM_PROBE][P7-U1-F][S1]。attrCallbackOrder 是实测钉板项：首次真机运行的 token↔attr 回调相对序即契约值（T=START_TAG、A=attr、E=END_TAG、X=TEXT，≤48 字符），后续运行必须一致；rootName=MPD 证 ignoreNameSpace 生效；nodeCount/maxDepth/selfClosingCount/rootAttrCount=189/6/176/6 为 Smooth 向量公式推导值，偏差即公式或树构建 FAIL；eventCount 依赖 SDK 空白文本事件形态，记实测。"},
+    {"step": "F-S2", "expect": "durationCases=10 durationOk=true pt0h10m54=654000 throwCases=2 throwOk=true", "note": "标记锚 [XDM_PROBE][P7-U1-F][S2]。parseXsDuration 公式表（DashUtil.cs:8-40 直译）：654000 为源单测向量（DashSanityTest.cs:27-31）；'1.2.3' 与空串必须 throw（整清单丢弃语义）。"},
+    {"step": "F-S3", "expect": "periodCount=1 pairCount=16 videoSegmentsCount=91 videoInitI=true videoLastTime=1781780000 audioSegmentsCount=90 audioSumCheck=true timelineSumAll=268", "note": "标记锚 [XDM_PROBE][P7-U1-F][S3]。Timeline 寻址公式推导：video=1 init+89(r=88)+1=91；末段 $Time$=20020000*89=1781780000；audio=1 init+89；audioSumCheck 用独立事件扫描 Σ(1+max(r,0)) 双算一致钉住（268=90 video media+2*89 audio media）——计数不符属公式 FAIL，不是可容忍偏差。"},
+    {"step": "F-S4", "expect": "periodCount=1 pairCount=4 videoSegmentsCount=179 audioSegmentsCount=175 audioMediaCount=174 startNumberZero=true dollarLiteral=true videoInitTail=sintel_audio_video_brs-848x386-1500kbps_init.mp4", "note": "标记锚 [XDM_PROBE][P7-U1-F][S4]。simple 寻址：ceil(888000ms/(120/24*1000ms))=178 video media、ceil(888000/5120)=174 audio media；startNumber=0（首媒体含 _0.m4s）与 $$ 字面 $（au$dio）为源 quirk 钉死；videoInitTail 为 init 段文件名（白名单字符，无 ? 替换）。"},
+    {"step": "F-S5", "expect": "periodCount=2 p1Items=2 p2Pairs=4 p2ListSegments=11 p2TimelineSegments=10 p1IndexSegments=1 tzeroFirst=s500.ts tzeroSecond=s600.ts tEqualsZeroQuirk=true", "note": "标记锚 [XDM_PROBE][P7-U1-F][S5]。三寻址同现：p1=SegmentBase index 单段整文件（video-only 2 条目）；p2=List init+10 SegmentURL=11、Timeline r=9 展开为 10；行内 t=\"0\" 向量钉 t>0 严格不等号 quirk：第二段保持 500+100=600（s600.ts），绝不重置为 0。"},
+    {"step": "F-S6", "expect": "dynamicRejected=true encryptedRejected=true noPeriodRejected=true wrongRootRejected=true bbcPairs=15 bbcVideoSegmentsCount=151 bbcFirstNumber=000001", "note": "标记锚 [XDM_PROBE][P7-U1-F][S6]。四个拒绝门（type=dynamic 大小写敏感精确等值/任意层 ContentProtection/无 Period/非 MPD 根）必须 throw=整清单丢弃；BBC：ceil(572.52/3.84)=150 media+1 init=151、5 video×3 audio=15 对、首媒体编号 $Number%06d$ 补零=000001。任一 rejected=false（不拒）照实记录并按 FAIL 分流。"},
+    {"step": "F-SUMMARY", "expect": "各段与 F-S1..F-S6 步骤行一致（每段首 kv 依次为 eventCount= / durationCases= / periodCount= / periodCount= / periodCount= / dynamicRejected=）", "note": "标记锚 [XDM_PROBE][P7-U1-F][SUMMARY]。兜底聚合行（段间 |、段内 ,）；F 全量聚合约 900B，正常不触发 1500B 降级；SUMMARY 与步骤行矛盾时判 FAIL；缺步骤行时 SUMMARY 不能补判。"},
+    {"step": "F-END", "expect": "ok=true steps=6 elapsedMs=<实测≥0>", "note": "标记锚 [XDM_PROBE][P7-U1-F][END]。END 行恒只有 ok/steps/elapsedMs 三个键；ok=true 只表示会话正常收尾（脚手架级未抛出），步骤是否达标以各行 key=value 判定；BEGIN/END 不配对属中断证据，取 devecocli log --crash 后整单元重跑。"},
+    {"step": "P-BEGIN", "expect": "runId=<HHmmss> filesDir=<沙箱files路径>", "note": "标记锚 [XDM_PROBE][P7-U1-P][BEGIN]。一次完整运行，需主机源 node docs/probe/P7-U1-dash-host.cjs --host 0.0.0.0 --port 8795（源地址填 http://<PC局域网IP>:8795 根地址）。"},
+    {"step": "P-S1", "expect": "fetchStatus=ok periodCount=1 videoSegments=3 audioSegments=3 planKind=Dash chunkCount=6 interleaveOk=true containerRule=.mp4 cleanupComplete=true", "note": "标记锚 [XDM_PROBE][P7-U1-P][S1]。真 HTTP：ManifestClient GET /mpd/probe.mpd → DashXmlFeed.parseDashManifest → buildDashPlan；probe.mpd 双轨 simple 寻址（timescale=1/duration=60/PT2M → 每轨 2 media+1 init）；交错序 c0..c5=v-init,a-init,v1,a1,v2,a2 且恒 offset=0/length=-1/isInit=false（interleaveOk 核验）；双 .mp4 → .mp4。源不可达时 fetchStatus 非 ok，属本步 FAIL（网络失败不跳过）。"},
+    {"step": "P-S2", "expect": "runKind=ready runError= runGeneration=1 runParts=6 p0Bytes=1024 p0Complete=true p1Bytes=1024 p1Complete=true p2Bytes=4096 p2Complete=true p3Bytes=4096 p3Complete=true p4Bytes=4096 p4Complete=true p5Bytes=4096 p5Complete=true partsComplete=6 partSizesOk=true leaseReleased=true cleanupComplete=true", "note": "标记锚 [XDM_PROBE][P7-U1-P][S2]。E4 全量下载 ready；每 part 字节=主机固定几何（init 1024×2、media 4096×4，按交错序 p0..p5），字节值不符即 FAIL；leaseReleased=true 为租约直接释放路径。"},
+    {"step": "P-S3", "expect": "runKind=ready asmStatus=success asmExtension=.mp4 asmBytes=9216 contentOrderMatch=true leaseReleased=true cleanupComplete=true", "note": "标记锚 [XDM_PROBE][P7-U1-P][S3]。单轨 muxed Dash 计划（探针构造形态；业务单轨不进计划）走 AdaptiveAssembler 拼接；输出 1024+2*4096=9216 字节且与主机 mod-251 连续图案（video 相位 0）逐字节一致——这是本构造时序下的事实，不证明任意 DASH 流拼接正确性。行内另有 runParts=3、p0..p2 字节、asmMediaStarted/asmMediaSettled/drain* 等过程键照实记录，不作判定。"},
+    {"step": "P-S4", "expect": "runKind=ready asmStatus=success asmExtension=<实测 .mp4|.mkv> remuxPath=<实测 media|fallback> asmBytes=<实测> leaseReleased=true cleanupComplete=true", "note": "标记锚 [XDM_PROBE][P7-U1-P][S4]。真 MediaProcessorNapi remux；合成字节上预期失败并降级 .mkv 串接（remuxPath=fallback）——降级不是 FAIL，remuxPath/asmExtension/asmBytes 如实记录；asmStatus=success 要求成立，资源不确定（closed=false/uncertain=true/cleanup=false）判 FAIL。真实媒体 remux 与产物可播判据见手册第 5 节②③（u6-4 外层集成验收面）。"},
+    {"step": "P-S5", "expect": "pauseTimerFired=true pausedKind=paused prefixBytes=<实测≥1> manifestRefetch=0 resumedKind=ready prefixPreserved=true leaseReleased=true cleanupComplete=true", "note": "标记锚 [XDM_PROBE][P7-U1-P][S5]。限速 4KiBps → 800ms pause → freshPlan=null 重开恢复；恢复路径不发生清单请求（manifestRefetch=0 是代码路径事实）；prefixPreserved 比对前缀文件 sha256；设备过快致分块全完成时按实际记录并 FAIL 分流时序。行内 pNBytes/pNComplete 为恢复完成后终值（note 覆盖写），不作暂停时刻判据。"},
+    {"step": "P-S6", "expect": "overBudgetRejected=true invalidUrlRejected=true singleTrackRejected=true e4Kind=rejected e4ErrorCode=InvalidAdaptiveRunInput cleanupComplete=true", "note": "标记锚 [XDM_PROBE][P7-U1-P][S6]。buildDashPlan 预算门（10001 段 > 10000）/非法 URL（含空格）/单轨（audio 段表为空）→ null 三连；空目录无存储计划 E4 run → rejected/InvalidAdaptiveRunInput。单轨拒绝钉住 buildDashPlan 仅接受双轨契约。"},
+    {"step": "P-SUMMARY", "expect": "各段与 P-S1..P-S6 步骤行一致（每段首 kv 依次为 fetchStatus= / runKind= / runKind= / runKind= / pauseTimerFired= / overBudgetRejected=）；若全量聚合超 1500B 则降级为每段仅首个 kv", "note": "标记锚 [XDM_PROBE][P7-U1-P][SUMMARY]。P 各段键较多（S2 全 6 槽字节键、S5 双 run 键），全量聚合可能逼近/超过 1500B 上限，降级形态（如 S1=fetchStatus=ok|S2=runKind=ready|…）合法；判定以步骤行为准，SUMMARY 与步骤行矛盾判 FAIL。"},
+    {"step": "P-END", "expect": "ok=true steps=6 elapsedMs=<实测≥0>", "note": "标记锚 [XDM_PROBE][P7-U1-P][END]。END 行恒只有 ok/steps/elapsedMs 三个键；资源回收事实在各步骤行末 cleanupComplete=true（P/C 特有），任一 false 判 FAIL（资源不确定与步骤结果无关）。"},
+    {"step": "C-BEGIN", "expect": "runId=<HHmmss> filesDir=<沙箱files路径>", "note": "标记锚 [XDM_PROBE][P7-U1-C][BEGIN]。一次完整运行，需主机源（与 P7-U1-P 同源 :8795）。"},
+    {"step": "C-S1", "expect": "firstKind=ready commitGeneration=1 leaseCurrent=true busyKind=rejected busyErrorCode=AdaptiveOwnerBusy readyLeaseAttach=true asmStatus=success asmExtension=<实测> asmBytes=<实测> outputSha256=<64位十六进制> drainClean=true leaseReleased=true restoredKind=ready restoredLeaseReleased=true cleanupComplete=true", "note": "标记锚 [XDM_PROBE][P7-U1-C][S1]。Dash 双轨计划（主机 /seg URL 3+3 段）跑通 E4→ready 租约→同 downloadId 第二 run 拒绝（覆盖属主表拒绝面，S5 单独钉目录属主）→attach→装配回填→装配前后双槽+状态文件指纹不变（drainClean=true）→释放→freshPlan=null 恢复 ready。outputSha256 仅指纹，不比对具体值。"},
+    {"step": "C-S2", "expect": "pauseTimerFired=true pausedKind=paused nonzeroPrefix=true resumedKind=ready asmStatus=success prefixBytesFidelity=<实测> oldPrefixUnchanged=true leaseReleased=true cleanupComplete=true", "note": "标记锚 [XDM_PROBE][P7-U1-C][S2]。单轨（muxed）计划 4KiBps + 1000ms 暂停：暂停时 2 槽（init+media）中媒体槽未完成；恢复 freshPlan=null；oldPrefixUnchanged 比对已提交前缀 sha256。时序敏感：实际 downloaded=0 或全完成均按观测记录，nonzeroPrefix=false 需人工复核限速，不算自动 FAIL。"},
+    {"step": "C-S3", "expect": "firstKind=ready stopRequested=true attached=false readerStarted=false drainedKind=<实测> leaseReleased=true leaseCurrentAfterRelease=false secondRelease=false cancelledClean=true cleanupComplete=true", "note": "标记锚 [XDM_PROBE][P7-U1-C][S3]。读者准入前暂停：ready 后先 pause 再 attachReader 必被拒（attached=false，cancelledClean=true 要求成立）；释放后 lease 不再 current，二次 release=false。"},
+    {"step": "C-S4", "expect": "firstKind=ready attached=true asmStatus=<实测，取消形态属预期> asmExtension=<实测> stopNotifications=<实测≥1> readerStopNotified=true stopRequested=true drainedKind=<实测> leaseReleased=true cleanupComplete=true", "note": "标记锚 [XDM_PROBE][P7-U1-C][S4]。读者准入后传递暂停：装配中 pause → onStop 回调传递给 reader（readerStopNotified=true 是契约核心）；装配被取消的 asmStatus（cancelled 形态）属预期不是 FAIL；若装配先于暂停完成则 stopNotifications=0 如实记录并 FAIL 分流主机吞吐。"},
+    {"step": "C-S5", "expect": "firstKind=ready ownerRejected=AdaptiveOwnerBusy leaseReleased=true cleanupComplete=true", "note": "标记锚 [XDM_PROBE][P7-U1-C][S5]。目录属主单写者：同 downloadId 第二 controller 在第一租约持有期必须被拒 AdaptiveOwnerBusy；主线程属主表事实，非跨进程文件锁。"},
+    {"step": "C-SUMMARY", "expect": "各段与 C-S1..C-S5 步骤行一致（每段首 kv 依次为 firstKind= / pauseTimerFired= / firstKind= / firstKind= / firstKind=）", "note": "标记锚 [XDM_PROBE][P7-U1-C][SUMMARY]。兜底聚合行；与步骤行矛盾判 FAIL；缺步骤行时不能补判。"},
+    {"step": "C-END", "expect": "ok=true steps=5 elapsedMs=<实测≥0>", "note": "标记锚 [XDM_PROBE][P7-U1-C][END]。END 行恒只有 ok/steps/elapsedMs 三个键；资源回收事实在各步骤行末 cleanupComplete=true，任一 false 判 FAIL。"}
+  ]
+}

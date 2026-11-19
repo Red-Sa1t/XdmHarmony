@@ -1,0 +1,47 @@
+{
+  "unitId": "P2-U1",
+  "slug": "u2-1-piecegrabber-segmentworker",
+  "sessions": "单会话模型：A=填测试源后点'运行全部'自动跑 S1~S5（5 步，无重启步——分片持久化属 U2.2）。全局判据：每步骤恰一行，行格式命中 FORMAT 正则 ^\\[XDM_PROBE\\]\\[([A-Z0-9-]+)\\]\\[([A-Za-z0-9-]+)\\]\\s(.+)$；标记行不含通过/失败判定词；单行 <1500B。环境前提：主机侧 node P1-U2-download-server.js 已启动（复用指引见 PROBE 手册 §1），设备内测试源填主机局域网 IP（禁 127.0.0.1）。观测口径注记：maxConcurrent/piecesCount 来自 30ms 轮询采样（awaitUntil 谓词轮询附带取样，单计时器）。",
+  "steps": [
+    {
+      "step": "BEGIN",
+      "expect": "runId=<非空HHmmss> filesDir=<非空沙箱files路径>",
+      "note": "会话开始标记，与 END 按 runId 配对。pending 文件目录前缀取本行 filesDir=。"
+    },
+    {
+      "step": "S1",
+      "expect": "sourceUrl=<base>/big.bin status=206 contentLength=4194304 rangeSupported=true chunks=<N>>=1",
+      "note": "测试源 Range 能力预检（探针自建 requestInStream + Range: bytes=0-，不走引擎/业务栈）——S2~S5 判定的环境前提。contentLength=4194304 与 SEG_SOURCE_BYTES 同值锚；rangeSupported=true 是 status==206 的谓词编码。分支映射：rangeSupported=false 或 errCode/errMessage（2300028 超时/2300007 拒连）→ FAIL 分流 env（服务器未启动/地址错/防火墙），S2~S5 无判定意义。"
+    },
+    {
+      "step": "S2",
+      "expect": "recordId=probe-p2u1-<runId> addOk=true finished=true piecesCount=16 maxConcurrent=8 connectedCount=<N>>=17 finalSize=4194304 elapsedMs=<N>>0 segBps=<N>>0 spotChecks=m0=o/m0=o/m0=o/m2097152=o/m4194303=o allSpotsMatch=true",
+      "note": "8 分段并行下载+多分片拼接字节抽查（新建 record→store.add→Downloader.start→30ms 轮询采样→onFinished→5 抽查点比对 expectedByteAt）。**maxConcurrent=8 是核心验收锚（'8 分段并行'观测口径=activeSegmentCount 即同时在途 taskpool.Task 数，D15；快源环境 4~7 → UNVERIFIED 换源分支）**。piecesCount=16±1（分裂收敛数学：4194304/262144=16 片；findMaxChunk 严格 `>` 使 rem==262144 不再分裂——8 是并发上限非片数）。connectedCount>=17（1 探测连接+16 分片连接，取消重派再加）。finalSize=4194304（statSync 终值）。**allSpotsMatch=true=多分片拼接字节级正确性证据**（确定性流 floor(o/65536)%251，任一分片错位/拼接漏序即 x；S2 pauseOffset=0 → 点集 {0,0,0,floor(total/2),total-1}）。分支映射：finished=false 或 finalSize=0（120s 超时）→ FAIL 分流 business-code（引擎不收敛）+查 hilog PieceScheduler；allSpotsMatch=false/spotChecks 含 =x→FAIL 分流 business-code（拼接错位——三支柱破坏，附 S3 定位）；engineFailed=true errCode 键组→按码分流（5=InvalidResponse/2=NonResumable/4=MaxRetry 查 env/8=DiskError/10200024=taskpool 消息注册回归点）；maxConcurrent<=3 或 piecesCount 越界→FAIL 分流 business-code（分裂调度回归）。"
+    },
+    {
+      "step": "S3",
+      "expect": "snapshotLines=n=16/<id8>.<off>.<len>.<dld>.1.<wS>-<wE>/... maxOverlapAcrossSnapshots=0 finalGapCount=0 coveredBytes=4194304 sourceBytes=4194304 coverageComplete=true",
+      "note": "区间完整性（不变量：任一瞬时 pieces Map 均为 [0,total) 的不交覆盖——分裂=一窗换两半窗保性质，取消重派后亦然）。**双口径**：maxOverlapAcrossSnapshots=0 对 S2 采集的每个瞬时快照逐帧 checkCoverage 取 max（全程每瞬时成立——区间不重叠验收锚，取消-重派三支柱[PieceGrabber/SegmentWorker 文件头审查必查项]未被破坏的直接证据）；finalGapCount=0/coveredBytes=4194304/coverageComplete=true 对最终快照（完成时点全片终值：state 全 1、Σlength=4194304）。**不可对全程快照并集校验**——历史大窗与其分裂半窗天然重叠（分裂取消时旧窗口残留历史帧），并集必 overlap>0（PROBE 手册 §4 注②）。snapshotLines 为最终快照单行（16 片 ≈900B<1500B；帧内 dld==len 全满、st=1 全 FINISHED）。分支映射：maxOverlapAcrossSnapshots>0→FAIL 分流 business-code（区间重叠——分裂取消-重派窗口数学回归；若 S2 allSpotsMatch 同时 false 则数据已错位）；finalGapCount>0 或 coverageComplete=false→FAIL 分流 business-code（覆盖不全——片丢失/分裂边界回归；coveredBytes 与 sourceBytes 差值即缺口规模）。"
+    },
+    {
+      "step": "S4",
+      "expect": "requestUrl=<base>/slow.bin?ms=40 status=200 singleBytes=4194304 streamEnded=true singleElapsedMs=<N>>0 singleBps=<N>>0 segBps=<N>>0 ratio=<N>",
+      "note": "吞吐对比（单连接基线：业务 HttpClient 无 Range GET /slow.bin?ms=40 → waitStreamEnd 计字节+耗时，abort 收尾；与 S2 引擎下载同源同延迟参数——ratio 分母分子同源可比）。**singleBps>0 且 segBps>0 是'吞吐可测'验收锚**；ratio 为观测值不判定：慢源下期望 >1（8 连接并行分摊 40ms/块延迟），快源/空载机器下 ≈1——EXPECT 记 UNVERIFIED 分支说明（不判 FAIL，Phase 2 '大文件吞吐显著优于 U1.2'的量化输入回写计划）。分支映射：singleBps=0 或 streamEnded=false→UNVERIFIED（基线流异常——查源延迟/超时后重跑 S4）；singleBytes!=4194304→FAIL 分流 business-code（HttpClient 字节计数回归）。"
+    },
+    {
+      "step": "S5",
+      "expect": "recordId=probe-p2u1-s5-<runId> pausedOffset=<N:0<N<4194304> activeAfterStop=0 resumed=true finalSize=4194304 maxConcurrentBefore=<N> spotChecks=... allSpotsMatch2=true",
+      "note": "暂停-恢复取消语义（慢源 ms=80 扩大暂停窗口：start→awaitUntil(downloaded>=262144)→stop()→awaitUntil(!isRunning && activeSegmentCount===0)→resume()→等 onFinished→二次抽查[点集含 pausedOffset-1/pausedOffset]）。**activeAfterStop=0 是 taskpool.cancel 协作取消排空锚**（stop 即清 records——D9 不复刻原版死 grabber 滞留 bug；onPaused 携带 Σdownloaded=D10）。0<pausedOffset<4194304（暂停窗口确定性：ms=80 慢源下 262144 阈值后 stop 落在中段；pausedOffset=0/4194304 → UNVERIFIED 换更慢源/大文件重跑）。resumed=true（恢复后 onFinished——多分片续传收敛）。finalSize=4194304。**allSpotsMatch2=true 是暂停-恢复跨多分片字节正确性证据**（前缀覆盖幂等[三支柱②]的字节级验证：pausedOffset 边界点字节错位即 x）。maxConcurrentBefore 为恢复前采样观测（快源下可 <8，不判定）。分支映射：activeAfterStop>0→FAIL 分流 business-code（取消排空回归）；resumed=false 或 finalSize=0→FAIL 分流 business-code（恢复不收敛——查 hilog PieceScheduler 续传三检）；allSpotsMatch2=false→FAIL 分流 business-code（前缀覆盖幂等破坏，附 pausedOffset 定位）；engineFailed=true errCode 键组→按 S2 表同码分流。"
+    },
+    {
+      "step": "SUMMARY",
+      "expect": "恰 5 段（S1..S5，各段含关键键：S1=status；S2=maxConcurrent,piecesCount,allSpotsMatch；S3=maxOverlapAcrossSnapshots,coverageComplete；S4=singleBps,segBps,ratio；S5=activeAfterStop,allSpotsMatch2）",
+      "note": "end(ok) 聚合单行（段间 |、段内 ,，值内 | 已替换 /），环形缓冲被冲掉时的兜底锚，与步骤行互证；单行 <1500B 由 ProbeKit 两级降级保证（S2/S3 段键多时降级只留首键）。"
+    },
+    {
+      "step": "END",
+      "expect": "ok=true steps=5 elapsedMs=<N>>=0",
+      "note": "ok=true 表示本次会话无脚手架级异常（步骤级 catch 不置 false）；steps=5 与该会话步骤行数互证；ok=false→分流 probe-code。会话守卫冒烟（PROBE 手册 §8）：暖启动重建后新 runId 行完整、无旧会话标记行串入、无孤儿 BEGIN/END；旧会话 Downloader 事件不串扰新会话（探针事实袋随会话重建）。"
+    }
+  ]
+}

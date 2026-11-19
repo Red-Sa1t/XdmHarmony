@@ -1,0 +1,65 @@
+{
+  "unitId": "P6-U1",
+  "steps": [
+    {
+      "step": "BEGIN",
+      "expect": "runId=<非空HHmmss> filesDir=<非空沙箱files路径>",
+      "note": "会话开始标记，与 END 按 runId 配对（多轮运行取最后一个 runId）。autoStart=true，进入 P6-U1 探针卡片即自动产生。全局判据：每步骤恰一行，行格式命中 FORMAT 正则 ^\\[XDM_PROBE\\]\\[([A-Z0-9-]+)\\]\\[([A-Za-z0-9-]+)\\]\\s(.+)$；标记行不含通过/失败判定词。tracker/BridgeUiEvents 监听器在组件挂载（BEGIN 前）注册，事件计数从 0 起。"
+    },
+    {
+      "step": "S1",
+      "expect": "started=true boundPort=8597 clearStatus=200 baseVideoCount=0 requestsBefore=<N>",
+      "note": "就绪+/clear 清空基线。started/boundPort 来自 BridgeServer.getStats()（EntryAbility 常驻启动的运行时证据；boundPort≠8597→UNVERIFIED 查端口占用）；clearStatus=200 即 /clear 业务成功统一 sync 应答；baseVideoCount=/clear 应答体 videoList 长度（清空后恒 0——应答在 clear 之后组装）。分支映射：clearStatus=err<code>→2300007 系连接被拒先查应用前台态（env 分流）；clearStatus≠200→business-code。"
+    },
+    {
+      "step": "S2",
+      "expect": "mediaStatus=200 mediaListCount=1 mediaTextSuffix=.mp4 mediaInfoPrefix=MP4 mediaAddedEvents=1 vid=<8字符前缀>",
+      "note": "/media 嗅探→列表增长。mediaListCount=/media 应答体 videoList 长度（IsNormalVideo 五条件过+ProcessNormalVideo 登记 video 表）；mediaTextSuffix=首条 text 末 4 字符（sanitize(file)+'.mp4'）；mediaInfoPrefix=description 首段 '[X]' 括号内 token（'['/']' 不在 emit 值白名单（ProbeKit VALUE_BAD），预剥离——设计书 §6 示例的 '[MP4]' 即本键 MP4）；mediaAddedEvents=tracker onMediaAdded 计数；vid=首条 id 前 8 字符（UUID，S4 命中分支复用，期望表按前缀断言）。分支映射：mediaListCount=0 且 mediaStatus=200→嗅探数学 business-code（查 isNormalVideo 五条件/Content-Type 门）；mediaStatus≠200→business-code。"
+    },
+    {
+      "step": "S3",
+      "expect": "tabUpdateStatus=200 tabTextPrefix=Test Clip tabExtKept=true mediaUpdatedEvents=0",
+      "note": "【2026-10-18 真机修订】S2 登记的是 normal 视频（.mp4），U6.2 IR-F1 修复（5ba2f9f）后与源一致不登记 TabUrl（VideoUrlHelper.cs:688-694），故 /tab-update 不改其名：text 维持 Test Clip、mediaUpdatedEvents=0 为正确行为（旧期望 New Title/1 写于修复前）。可改名路径（HandleDashAudio/dual 带 tabUrl）由单测 BridgeConvergence 组覆盖。原注：/tab-update 标题回写。tabTextPrefix=应答 videoList 首条 text 前 9 字符（generateUpdatedFileName：sanitize(newName)+保留扩展名）；tabExtKept=首条 text 以 .mp4 结尾谓词；mediaUpdatedEvents=tracker onMediaUpdated 计数（仅 yt+video 两表扫描命中）。分支映射：tabExtKept=false→business-code（扩展名丢失查 getExtensionOf）；mediaUpdatedEvents=0→business-code（tabUrl 精确等值匹配失败）。"
+    },
+    {
+      "step": "S4",
+      "expect": "vidMissStatus=200 vidMissListCount=1 vidHitStatus=200 videoDialogEvents=1",
+      "note": "/vid 未命中/命中。未命中（vid=nonexistent-vid）静默无操作→200 且列表不变（vidMissListCount=1=S2 之后基线）；命中（S2 捕获 id）+ startDownloadAutomatically 默认 false→不建链只发 onShowVideoDownloadDialog 事件（videoDialogEvents=1）。分支映射：vidHitStatus=200 且 videoDialogEvents=0→查 Config.startDownloadAutomatically 是否被改（env/配置态）或事件注册（business-code）；两步任一 ≠200→business-code。"
+    },
+    {
+      "step": "S5",
+      "expect": "downloadStatus=200 downloadDialogEvents=1 uaPreserved=true cookieStripped=true acceptStripped=true acceptEncodingPreserved=true",
+      "note": "/download 接管+头剥离观测（chrome filename 键形）。对话框事件携带的 BridgeMessage.requestHeaders 检查 removeBlockedHeaders 结果：User-Agent 留（非黑名单）/Cookie 删（黑名单精确等值）/Accept 删（'accept' 精确等值，非前缀）/Accept-Encoding 留（'accept-encoding'≠'accept'，等值语义）。uaPreserved/cookieStripped/acceptStripped/acceptEncodingPreserved 均为 headerValueFirst 直接观测谓词。分支映射：cookieStripped=false 或 acceptEncodingPreserved=false→business-code（头剥离纯函数返修，对照 IpcHttpMessageProcessor.cs:376-394）；downloadDialogEvents=0 同 S4 分支。"
+    },
+    {
+      "step": "S6",
+      "expect": "argsTabStatus=200 argsTabPrefix=Test Clip argsMediaStatus=200 argsMediaCount=2",
+      "note": "【2026-10-18 真机修订】同 S3：--media-tab-url 组按 tabUrl 匹配，normal 条目无 tabUrl 不被改名，首条 text 维持 Test Clip（源 ArgsProcessor→UpdateMediaTitle 同语义）。原注：/args 参数链两组。第一组（xdm+app:// 前缀跳过+--media-tab-url/--media-tab-title）回写标题→argsTabPrefix=应答首条 text 前 10 字符；第二组（--url --media --known-mime-type video/mp4 --known-file-size 2097152）经 processMediaMessage 登记新条目→argsMediaCount=2（累计）。--media-tab-title 缺省类异常走 /args 内层吞异常仍 200（ArgsProcessor.cs:130-133）不属本步观测面。分支映射：argsTabPrefix 非 Args Title→business-code（parseArgs 文法/标题回写）；argsMediaCount=1→business-code（--url+--media 链或 known-* 头注入）。"
+    },
+    {
+      "step": "S7",
+      "expect": "linkStatus=200 batchEvents=1 pendingLinks=1",
+      "note": "/link 兼容路由（现版扩展不发，兼容保留）。数组两项：空 url 项跳过→pendingLinks=1（getPendingBatchLinks 前后差值，内存累积供 U6.3 勾选窗）；batchEvents=onShowBatchSelection 计数。分支映射：pendingLinks=2→business-code（空 url 跳过门）；linkStatus≠200→business-code（数组门/七字段映射）。"
+    },
+    {
+      "step": "S8",
+      "expect": "unknownClosed=true badJsonClosed=true vidMissingClosed=true",
+      "note": "错误处理三谓词：GET /sync?x=1（未知路径，不剥 query）/ POST /download 体 'not json'（坏 JSON 门）/ POST /vid 体 '{}'（缺 vid→ContainsKey(null) 等价物）。三键均为 closed && 无完整应答头块 的直接观测谓词——**连接关闭且零应答字节=正确**（U0.3 的 404 中间态本单元废止，设计书 §0-1；U0.3 探针 S4 的 querySyncStatus=404 预期不复现，其探针已归档不重跑）。与主机侧 Node 脚本 T09/T10 及手册 curl ⑨⑩⑪ 同口径。分支映射：任一 false→business-code 返修（异常被误 catch 转应答=最严重偏差，§8 风险表首行）。"
+    },
+    {
+      "step": "S9",
+      "expect": "syncStatus=200 fieldCount=8 fieldOrder=enabled/fileExts/blockedHosts/requestFileExts/mediaTypes/tabsWatcher/videoList/matchingHosts finalVideoCount=2 connections=<N> requests=<N>",
+      "note": "最终 /sync 全量。fieldCount/fieldOrder 为 parseSyncBody 观测（八字段契约序，fieldOrder 逗号经 ','→'/' 预转换，原始逗号形在 ProbeKit 白名单替换前的值与 Node T01 fields 一致）；finalVideoCount=2（S2 与 S6 第二组各登记一条；S1 /clear 之后累计）；connections/requests 为 stats 终快照（与 S1 requestsBefore 差值互证：本会话 S1~S9 共发出 13 个请求=S1:1+S2:1+S3:1+S4:2+S5:1+S6:2+S7:1+S8:3+S9:1，每请求各新连接）。分支映射：fieldCount≠8 或 fieldOrder 偏序→business-code（SyncFields 字段序契约）；finalVideoCount≠2→对照 S2/S6 分支。"
+    },
+    {
+      "step": "SUMMARY",
+      "expect": "恰 9 段（S1..S9），各段含关键键：S1=clearStatus 或 baseVideoCount；S2=mediaListCount 或 vid；S3=tabExtKept；S4=videoDialogEvents；S5=cookieStripped；S6=argsMediaCount；S7=pendingLinks；S8=unknownClosed；S9=fieldOrder 或 finalVideoCount",
+      "note": "end(ok) 聚合单行（段间 |、段内 ,，值内 | 已替换 /），环形缓冲被冲掉时的兜底锚，与步骤行互证；单行 <1500B 由 ProbeKit 两级降级保证。"
+    },
+    {
+      "step": "END",
+      "expect": "ok=true steps=9 elapsedMs>=0",
+      "note": "ok=true 表示本次会话无脚手架级异常（步骤级 catch 不置 false，失败路径以 errCode/errMessage 键组呈现于对应步骤行）；steps=9 与步骤行数互证；ok=false→分流 probe-code。双轨判定合并口径（手册 §4/§5）：设备侧 S1~S9 全部命中本表 expect 且主机侧 Node 脚本 SUMMARY pass=10 fail=0（退出码 0）或人工 curl 命令集逐条符合预期现象（含未知路径 Empty reply=正确）——两轨任一全绿即本单元 [P] 运行时验收通过，两轨冲突以设备侧探针+Node 自动轨为准并回贴双轨日志分流。"
+    }
+  ]
+}
