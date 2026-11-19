@@ -251,6 +251,7 @@ DevEco 模拟器「MateBook Pro」（pc_all_x86，HarmonyOS 6.1.1 API 24，devic
 | 探针缺陷 ×2（P4-U3 S3 读回变量未赋值；P1-U2 S7 accessSync 返回值被忽略致 tempDirGone 恒 false——10-03 起的 low 登记项实为探针误报，引擎清理正确） | — | 2026-11-19 修探针后复跑 PASS（tempDirGone=true；timeoutR/segmentsR/minVideoR 与写入一致） |
 | **分片引擎重复下载**（大文件临时目录膨胀：1.2GB 文件临时目录 3GB、2.4GB 文件 3.8GB 直至磁盘写满；进度条长时间停在 0%） | 高 | **2026-11-19**：根因=worker 在 setInterval 回调内 Task.sendData 报进度，本平台抛错后 reportDisabled，主线程 piece.downloaded 恒为 0、按 0 盲分裂，被分裂片往往已近写满→整段重下。改为 SharedArrayBuffer 共享状态（已写字节数+取消标志），主线程每 250ms 及分裂前轮询；进度消息只接受单调前进值。实测：300MB 文件临时目录峰值 301MB（修前 370MB）、500MB 限速下载暂停→恢复 MD5 一致、500MB 强杀重启续传 MD5 一致；P1-U2/P2-U1/P2-U2(S4)/P3-U1/P3-U2 与基线一致 |
 | 运行时切换语言后状态列/进度窗仍为旧语言；删除任务后进度窗残留；进度窗长 URL 只显示到最后一个 '/' | medium | **2026-11-19**：语言切换回调刷新缓存标签（状态列经 AppStorage 版本号重渲染）；删除时关闭对应进度窗；URL 按字符截断加省略号。模拟器复测通过 |
+| 上架风险项（设备类型声明了未测试的 phone；PC 端无任何键盘快捷键——draw.io 曾因此被驳回） | medium | **2026-11-20**：module.json5 deviceTypes 仅 2in1；主窗口 Ctrl+N/Ctrl+A/Delete/Esc/Ctrl+F（搜索框获焦时让出编辑键）。模拟器实测 Ctrl+A/Esc/Delete/Ctrl+N 生效，Ctrl+F 未实测（输入法隐私协议） |
 
 ### 档 2 开放 medium
 
@@ -307,12 +308,12 @@ DevEco 模拟器「MateBook Pro」（pc_all_x86，HarmonyOS 6.1.1 API 24，devic
 6. **权限申请结论更正（2026-10-15，官方文档比对定论）**：改名批次提交说明中「4 权限均为开放权限、无需 AGC 权限申请页操作」**有误**，更正为——INTERNET / KEEP_BACKGROUND_RUNNING / PREPARE_APP_TERMINATE 三项为开放权限（系统授权，声明即用，不在 AGC 申请页属正常）；**READ_PASTEBOARD 为 ACL 受限权限**，须在 AGC 提交受限权限申请（理由文案备好：剪贴板链接监视为核心功能）；被拒降级方案为移除该权限改用 PasteButton 组件（用户主动粘贴）。**2026-10-17 一手验证补充**：signature generate 工具链提示该受限权限「随 app release 一同审核」，且随**调试 Profile 装包不拒**（F.2 实测 install successfully）——「未获批正式分发被拒」的触发点在 AGC 发布证书/上架审核，不在装机。完整提审材料见 [AGC-SUBMISSION.md](AGC-SUBMISSION.md)（2026-10-15 新建）。
 7. **新包名终局登记（2026-10-17，重签闭环）**：真机连接后按第 5 条流程完成（a）`devecocli signature generate --product default` 生成绑定 `com.neuohos.xdm` 的新 Profile（signingConfigs 自动回填 build-profile.json5；材料文件名沿用工程名 `default_XdmHarmony_*` 属正常——名随工程、内容随包名）；（b）§F.1 release 构建实测（`BUILD SUCCESSFUL in 3 min 19 s 790 ms`）；（c）三件套实测回填下表【新】——**本表自此接替 11:08 旧表成为终局登记**（旧表降级为旧包名历史记录）；（d）真机装包+启动冒烟通过（F.2）。此后仅剩探针会话#2（安装运行，不构建）与 git tag，任何再构建须重测回填。
 
-12. **全量检测 + 上架整改 + 改名/图标 + 分片引擎修复后终局登记（2026-11-19 晚）**：门禁 642/642（runDir `2026-11-19T11-08-50-654Z-15d23d22-*`）、主机套件 630/625/0/5（+1 YouTube DASH 音视频成对登记用例），§F.1 release（`BUILD SUCCESSFUL in 6 min 48 s 685 ms`），PC 模拟器装包启动通过、`page=probe` 被忽略。本条接替第 11 条指纹表。
+12. **全量检测 + 上架整改 + 改名/图标 + 分片引擎修复后终局登记（2026-11-19 晚）**：门禁 642/642（runDir `2026-11-19T15-36-08-615Z-b552abf9-*`，2026-11-20 设备类型+快捷键后复跑）、主机套件 630/625/0/5（+1 YouTube DASH 音视频成对登记用例），§F.1 release（`BUILD SUCCESSFUL in 7 min 5 s 351 ms`），PC 模拟器装包启动通过、`page=probe` 被忽略。本条接替第 11 条指纹表。
 
 | 产物（2026-11-19 终局） | 路径 | 构建模式 | 时间戳 | 大小 | sha256 |
 |---|---|---|---|---|---|
-| entry-default-signed.hap | entry/build/default/outputs/default/ | **release** | 2026-11-19 22:16:34 +1100 | 8,993,885 B | `590cf6cb878d80fbf71707b4a40a1fff15fdce8d3e0d8cf9bad2d110be3ef9bd` |
-| entry-default-unsigned.hap | entry/build/default/outputs/default/ | release（未签名伴生） | 2026-11-19 22:16:24 +1100 | 8,860,776 B | `b8b2f4dfc5743d1e556f2f99ae8d78a23e5bf8c2ccadc6e2c7aaef2ddfe85e4f` |
+| entry-default-signed.hap | entry/build/default/outputs/default/ | **release** | 2026-11-20 02:47:22 +1100 | 8,999,226 B | `f2160e245d39a76ed422be6ab59bfa1939761d9acb8cc6ea15239ccbe55d0bc1` |
+| entry-default-unsigned.hap | entry/build/default/outputs/default/ | release（未签名伴生） | 2026-11-20 02:47:04 +1100 | 8,865,183 B | `6b220dcd7fc765a5e2fbc118e5a0d58c6324e1867b49e2ec32fd4a0732f98b92` |
 
 - 21 条目、无 sourceMaps.map（仅 symbolMap.map）。
 
@@ -424,6 +425,7 @@ node scripts/run-hypium.cjs --expected-tests 642 --output ../migration-runs/hypi
 
 - 通过判据=exit 0 且 verdict.json `ok:true`、`counts.total=642/pass=642/failure=0/error=0/ignore=0`（`--expected-tests 642` 钉注册防漏，run-hypium.cjs:56；门禁四条件见 scripts/HYPIUM_GATE.md:21-29）。**642 口径自 2026-10-15 起**（IR-F1/F1 修复批次 +2 回归）；此前历轮为 640 口径，防漏钉值须随之更新。
 - **不得以 hvigor 退出码或 BUILD SUCCESSFUL 判绿**——hvigor test 存在假绿（退出码 0 且 BUILD SUCCESSFUL 但断言失败被吞，实测一次吞 5 例，HYPIUM_GATE.md:1-3）。本批次又实证一例门禁价值：首跑 642 中 1 条 **error**（新增用例 /args body 误传裸串非 JSON 数组）而 hvigor 仍 BUILD SUCCESSFUL，真值 wrapper 以 `ok:false` 拦截（runDir `migration-runs\hypium\2026-10-15T15-18-28-314Z-*`，实测 641 pass/1 error）；修用例后复跑转绿。
+- **归档证据（2026-11-20，设备类型 2in1 + 键盘快捷键后终版，642 口径）**：runDir `D:gitHarmonyPCmigration-runshypium6-11-19T15-36-08-615Z-b552abf9-6a06-4bcb-bf10-cb9353b32c41`，ok:true 642/642；主机套件 630/625/0/5。
 - **归档证据（2026-11-19 晚，改名+引擎修复后终版，642 口径）**：runDir `D:gitHarmonyPCmigration-runshypium6-11-19T11-08-50-654Z-15d23d22-1ae1-41db-82cb-3038b943fbfb`，ok:true 642/642；主机套件 630/625/0/5。
 - **归档证据（2026-11-13 PC 模拟器验收修复后终版，642 口径）**：runDir `D:gitHarmonyPCmigration-runshypium6-11-13T11-11-00-867Z-1b1cee41-80c0-4657-a474-094b69c01fd1`，ok:true 642/642；主机套件 629/624/0/5。
 - **归档证据（2026-11-06 UI 统一整改后终版，642 口径）**：runDir `D:gitHarmonyPCmigration-runshypium6-11-06T09-27-20-911Z-c7aa0bd6-7a26-4ac9-9b92-cbf11c8dfe5e`，ok:true 642/642；主机套件 629/624/0/5。

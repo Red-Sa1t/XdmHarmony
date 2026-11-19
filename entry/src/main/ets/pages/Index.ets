@@ -62,6 +62,7 @@
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { bundleManager, common } from '@kit.AbilityKit';
 import { promptAction } from '@kit.ArkUI';
+import { KeyCode } from '@kit.InputKit';
 import { fileIo } from '@kit.CoreFileKit';
 import { BusinessError, pasteboard } from '@kit.BasicServicesKit';
 import { DownloadRecord } from '../model/DownloadRecord';
@@ -124,7 +125,7 @@ import { finishedSize } from '../core/notify/NotifyAlgo';
 // OPT-1 四子组件（纯搬迁自本页：CategoryPanel←:115-155/:1827-1851、ToolbarBar←:1855-1931、
 // InProgressPane/FinishedPane←:1711-1798 @Builder）
 import { CategoryPanel } from '../components/CategoryPanel';
-import { ToolbarBar } from '../components/ToolbarBar';
+import { ToolbarBar, SEARCH_INPUT_ID } from '../components/ToolbarBar';
 import { InProgressPane } from '../components/InProgressPane';
 import { FinishedPane } from '../components/FinishedPane';
 
@@ -169,6 +170,8 @@ struct Index {
   /** 表头箭头重渲染锚（DS.sortState() 非 @State 不可追踪，列头点击后自增触发表头刷新） */
   @State sortVersion: number = 0;
   /** 状态列标签（§3.6：Index 装配一次传入，行内零资源查询） */
+  /** 搜索框是否获焦（ToolbarBar 回报；快捷键据此让出文本编辑按键） */
+  private searchFocused: boolean = false;
   private statusLabels: StatusLabels = {
     downloading: 'Downloading',
     stopped: 'Stopped',
@@ -1081,6 +1084,60 @@ struct Index {
     this.finishedDS.applyFilter(this.searchText.trim(), this.currentCategory());
   }
 
+  /** 主窗口按键（2026-11-20）：Delete 删除选中、Ctrl+A 全选当前列表、Esc 取消选择、Ctrl+F 定位搜索框；
+   * 搜索框获焦时不处理 Delete/Ctrl+A/Esc（留给文本编辑）。Ctrl+N 新建由 keyboardShortcut 承担。 */
+  private handleKeyEvent(event: KeyEvent): boolean {
+    if (event.type !== KeyType.Down) {
+      return false;
+    }
+    let ctrl: boolean = false;
+    try {
+      if (event.getModifierKeyState !== undefined) {
+        ctrl = event.getModifierKeyState(['Ctrl']);
+      }
+    } catch (e) {
+      ctrl = false;
+    }
+    if (ctrl && event.keyCode === KeyCode.KEYCODE_F) {
+      this.getUIContext().getFocusController().requestFocus(SEARCH_INPUT_ID);
+      return true;
+    }
+    if (this.searchFocused) {
+      return false;
+    }
+    if (ctrl && event.keyCode === KeyCode.KEYCODE_A) {
+      this.selectAllVisible();
+      return true;
+    }
+    if (!ctrl && event.keyCode === KeyCode.KEYCODE_FORWARD_DEL) {
+      if (this.selectedIds.size > 0) {
+        this.handleToolbarDelete();
+      }
+      return true;
+    }
+    if (event.keyCode === KeyCode.KEYCODE_ESCAPE && this.selectedIds.size > 0) {
+      this.clearSelection();
+      this.recomputeToolbar();
+      return true;
+    }
+    return false;
+  }
+
+  /** Ctrl+A：选中当前标签页可见（已排序/过滤）的全部行 */
+  private selectAllVisible(): void {
+    const ds: DownloadListDataSource = this.activeCategoryIndex === 0 ? this.inProgressDS : this.finishedDS;
+    const ids: string[] = ds.visibleIds();
+    for (let i = 0; i < ids.length; i++) {
+      const record: DownloadRecord | null = this.findById(ids[i]);
+      if (record !== null) {
+        record.uiSelected = true;
+        this.selectedIds.add(ids[i]);
+      }
+    }
+    this.selectedCount = this.selectedIds.size;
+    this.recomputeToolbar();
+  }
+
   /** 单选替换（D3，WPF 单击选择语义）：先清全部选中再标新行 */
   private selectRow(id: string): void {
     this.clearSelection();
@@ -1895,6 +1952,9 @@ struct Index {
             },
             onSearchClick: (): void => {
               this.onSearchClick();
+            },
+            onSearchFocusChange: (focused: boolean): void => {
+              this.searchFocused = focused;
             }
           })
 
@@ -1983,6 +2043,16 @@ struct Index {
       .height('100%')
       .padding(12)
       .alignItems(VerticalAlign.Top)
+      // 键盘快捷键（2026-11-20，PC 审核：键盘操作应符合标准定义）
+      .focusable(true)
+      .defaultFocus(true)
+      .focusOnTouch(true)
+      .keyboardShortcut('n', [ModifierKey.CTRL], (): void => {
+        this.openNewDownloadFromClipboard();
+      })
+      .onKeyEvent((event: KeyEvent): boolean => {
+        return this.handleKeyEvent(event);
+      })
     }
     .mode(NavigationMode.Stack)
     .navDestination(this.settingsNavDestination)

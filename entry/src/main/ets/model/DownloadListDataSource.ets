@@ -128,6 +128,15 @@ export class DownloadListDataSource extends BasicDataSource<DownloadRecord> {
     return null;
   }
 
+  /** 当前投影（排序+过滤后可见行）id 快照（Ctrl+A 全选当前视图） */
+  visibleIds(): string[] {
+    const ids: string[] = [];
+    for (let i = 0; i < this.visible.length; i++) {
+      ids.push(this.visible[i].id);
+    }
+    return ids;
+  }
+
   /** 全量 id 快照（清除全部已完成：源 ClearAllFinishedClicked 作用于未过滤全集） */
   allIds(): string[] {
     const ids: string[] = [];

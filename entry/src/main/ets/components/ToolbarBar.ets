@@ -14,6 +14,9 @@
 
 import { ToolbarState } from '../core/util/ToolbarAlgo';
 
+/** 搜索框组件 id（Ctrl+F 经 focusControl.requestFocus 定位） */
+export const SEARCH_INPUT_ID: string = 'xdm-search-input';
+
 @Component
 export struct ToolbarBar {
   /** 六钮 enabled+四钮 visible 快照（Index.recomputeToolbar 整体替换同步） */
@@ -33,6 +36,9 @@ export struct ToolbarBar {
   onResumeClick: () => void = (): void => {
   };
   onSearchClick: () => void = (): void => {
+  };
+  /** 搜索框获焦/失焦（Index 据此避免 Delete/Ctrl+A 等快捷键抢走文本编辑按键） */
+  onSearchFocusChange: (focused: boolean) => void = (focused: boolean): void => {
   };
 
   build() {
@@ -97,8 +103,18 @@ export struct ToolbarBar {
       TextInput({ placeholder: $r('app.string.lbl_search'), text: this.searchText })
         .width(100)
         .height(32)
+        .id(SEARCH_INPUT_ID)
         .onChange((value: string) => {
           this.searchText = value;
+        })
+        .onFocus(() => {
+          this.onSearchFocusChange(true);
+        })
+        .onBlur(() => {
+          this.onSearchFocusChange(false);
+        })
+        .onSubmit(() => {
+          this.onSearchClick();
         })
       Button() {
         SymbolGlyph($r('sys.symbol.magnifyingglass'))
