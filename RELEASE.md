@@ -14,12 +14,13 @@
 - **键盘快捷键**（2026-11-20）：Ctrl+N 新建下载、Ctrl+A 全选当前列表、Delete 删除选中（弹确认）、Esc 取消选择、Ctrl+F 定位搜索框；搜索框获焦时 Delete/Ctrl+A/Esc 留给文本编辑。模拟器实测 Ctrl+A、Esc、Delete、Ctrl+N 生效；Ctrl+F 未实测（模拟器聚焦输入框会弹第三方输入法隐私协议，未代为同意）。
 - **商店版界面**：不可用的占位入口已移除（导出/导入、帮助、报告问题、检查更新、视频向导、队列/计划任务）；"移除已完成的任务"与"关于"已实现；内部测试页在 release 包中不可达（实测 `--ps page probe` 落主界面）。
 
+- **上传包（.app）**：`artifacts/XdmDownloadManager-1.0.0-release-signed.app`（2026-11-20 构建，3,885,391 B，SHA-256 `89caeb638fb83e70a71f85504b35553c3a2b8f6a41747462d5be8e3851d20795`）。发布证书签名（Release 证书，有效期至 2029-10-15，链至 Huawei CBG Root CA G2）；内嵌 Profile 与 `xdm_publishRelease.p7b` 逐字节一致（type release、app_gallery、`com.neuohos.xdm`、allowed-acls 含 READ_PASTEBOARD）；`hap-sign-tool verify-app` 校验 .app 通过，同次构建的发布签名 HAP 也校验通过。pack.info：Release、compatible 23 / target 24；包内 HAP `buildMode=release`、`debug=false`、deviceTypes 仅 2in1。.app 内的 HAP 为未签名形态，由 .app 整包签名覆盖（当前 SDK 的打包方式）。发布签名包不能直接装机，回归仍用调试签名包。
+
 ## 提交前仍需完成（需开发者本人在 AGC 操作）
 
-1. **READ_PASTEBOARD 受限权限（ACL）申请**：AGC → 应用 → 受限权限申请。理由文案见 `docs/delivery/AGC-SUBMISSION.md` §3。被拒的降级方案：去掉该权限，复制链接后改为手动粘贴（剪贴板自动识别失效，其余功能不受影响）。
-2. **发布证书**：DevEco Studio → Build → Generate Key and CSR（生成 .p12 与 .csr，口令自己保管）→ AGC → 证书、APP ID 和 Profile → 证书 → 新增"发布证书"，上传 .csr，下载 .cer。
-3. **发布 Profile**：AGC 新增 Profile，类型"发布"，包名 `com.neuohos.xdm`，选上一步的发布证书，**受限权限勾选 READ_PASTEBOARD**（ACL 获批后才可勾选），下载 .p7b。
-   把 .p12 / .cer / .p7b 放到本机签名目录后告诉我：我在 `build-profile.json5` 新增 `release` signingConfig（口令按 hvigor 方式加密）、product 切到 `release`，构建上架用的 **.app**（工程级 assembleApp），做 `verify-app` 校验并登记 SHA-256。发布签名的包不能直接装机，回归仍用调试签名包。
+1. ~~READ_PASTEBOARD 受限权限（ACL）申请~~、~~发布证书~~、~~发布 Profile~~：已完成（本机 `C:\Users\<用户>\.ohos\publish\xdm\` 下有 xdm.p12、xdm_publish.cer、xdm_publishRelease.p7b，2026-11-20；Profile 已含 READ_PASTEBOARD，说明 ACL 已获批）。
+2. ~~构建上架 .app~~：已完成，见上文"上传包"。重新构建方法见文末"更新流程"。
+3. （保留编号）
 4. **APP 备案**（中国大陆上架必需）：在 AGC/工信部备案系统完成，取得备案号后填入 AGC。
 5. **AGC 创建应用并提交**：包名 `com.neuohos.xdm`（创建后不可改）→ 上传 .app → 按 `store-listing/应用介绍.md` 填名称、简介、介绍、关键词、新版本特性、分类（实用工具 > 下载管理），上传 216 图标与 `screenshots-promo/` 展示图 → 隐私政策链接填上面的地址 → 权限用途按 AGC-SUBMISSION §3 → 开源声明填 GPL-2.0 → 完成内容分级问卷 → 审核备注粘贴 AGC-SUBMISSION §6（8597 本地端口、后台行为、设备形态）→ 提交审核。
 
@@ -44,6 +45,7 @@
 | 2026-11-19 | 展示图加配文（三种尺寸） | 提交 087dce7 |
 | 2026-11-19 | 隐私政策发布到 GitHub Pages；GitHub 源码快照；GitCode 推送到最新 | 提交 aada263、d522252 |
 | 2026-11-20 | 设备类型收窄为 2in1；主窗口键盘快捷键（Ctrl+N/Ctrl+A/Delete/Esc/Ctrl+F） | 本文件"已就绪"，DELIVERY D 档 1 |
+| 2026-11-20 | 发布签名构建上架 .app（工程级 assembleApp），verify-app 通过、内嵌 Profile 与发布 Profile 一致 | 本文件"上传包" |
 
 模拟器覆盖不到、留待真机的项：真实网络路径与性能、PC 实机目录授权持久化与后台保活、真实浏览器页面捕获、右键菜单（此前已在真机上验证）。
 
@@ -64,4 +66,7 @@
 
 - **改了截图或配文**：替换 `store-listing/raw/` 中的原图或改 `scripts/make-promo.py` 里的标题，运行 `python scripts/make-promo.py`。
 - **改了隐私政策或要更新 GitHub 源码**：在本仓库提交后，用 `git archive main` 导出到临时目录，把 `build-profile.json5` 的 `signingConfigs` 置为 `[]` 并删掉 product 的 `signingConfig` 行，再提交推送到 GitHub `Red-Sa1t/XdmHarmony` 的 main；Pages 会在几分钟内自动更新。
+- **重新构建上架 .app**：发布签名配置只存在于本机工作区的 `build-profile.json5`（`release` signingConfig，keyAlias `xdm`，口令为 hvigor 密文，**不提交入库**），平时 product 指向调试签名 `default`。构建时临时把 product 的 `signingConfig` 改为 `'release'`，设置 `DEVECO_SDK_HOME=D:\Tools\DevEco Studio\sdk`，执行
+  `node "D:/Tools/DevEco Studio/tools/hvigor/bin/hvigorw.js" --mode project -p product=default -p buildMode=release assembleApp --no-daemon`，
+  产物 `build/outputs/default/XdmHarmony-default-signed.app`；用 `hap-sign-tool.jar verify-app` 校验后复制到 `artifacts/` 并登记 SHA-256，最后把 product 改回 `'default'`。
 - **改了代码**：跑主机测试（`node --test XdmHarmony/tests/host/`，在上级目录执行）与 Hypium 门禁（DELIVERY F.3），再做 release 构建并在 DELIVERY E 节登记指纹。

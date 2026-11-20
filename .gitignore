@@ -14,3 +14,6 @@ src/main/ets/core/engine/.hvigor/
 
 # run-hypium 真值门禁默认输出（未传 --output 时落在仓内）
 /test-results/
+
+# 上架包（发布签名产物，不入库）
+/artifacts/

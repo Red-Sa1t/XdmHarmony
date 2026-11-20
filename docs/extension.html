@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>XDM下载管理器 浏览器扩展安装说明</title>
+<style>
+  body { font-family: -apple-system, "HarmonyOS Sans", "PingFang SC", "Microsoft YaHei", sans-serif; max-width: 760px; margin: 0 auto; padding: 24px 16px; line-height: 1.7; color: #222; background: #fff; }
+  h1 { font-size: 24px; } h2 { font-size: 18px; margin-top: 28px; }
+  code { background: #f2f3f5; padding: 1px 5px; border-radius: 4px; }
+  .muted { color: #666; font-size: 14px; }
+  .note { background: #f4f8ff; border-left: 4px solid #2a78ec; padding: 10px 14px; }
+</style>
+</head>
+<body>
+<h1>XDM下载管理器 浏览器扩展安装说明</h1>
+<p class="muted">适用版本：XDM下载管理器 1.0.0；扩展版本 3.3（Manifest V3）</p>
+
+<div class="note">浏览器扩展是<b>可选功能</b>。不安装扩展也可以正常下载：在浏览器中复制下载链接后切回本应用，应用会自动识别剪贴板中的链接并弹出新建下载（也可以点"新建"手动粘贴）。</div>
+
+<h2>扩展能做什么</h2>
+<ul>
+  <li>在浏览器中点击下载链接时，把下载交给 XDM下载管理器（多线程、可断点续传）。</li>
+  <li>网页播放视频时识别视频地址（MP4、HLS、DASH 等），在应用的"媒体抓取"页中选择下载。</li>
+  <li>可以在扩展弹出窗口中随时关闭接管，关闭后浏览器按原样下载。</li>
+</ul>
+
+<h2>安装前准备</h2>
+<ul>
+  <li>已安装并打开 XDM下载管理器（扩展通过本机 <code>127.0.0.1:8597</code> 与应用通信，应用未运行时扩展不会接管下载）。</li>
+  <li>一款支持"加载已解压的扩展程序"的浏览器（Chromium 内核浏览器通常在扩展管理页提供"开发者模式"）。</li>
+</ul>
+<p>本扩展目前<b>没有上架浏览器扩展商店</b>，需要按下面的步骤手动加载。</p>
+
+<h2>安装步骤</h2>
+<ol>
+  <li>下载扩展压缩包：<a href="xdm-browser-extension-3.3.zip">xdm-browser-extension-3.3.zip</a>，解压到一个固定的文件夹（之后不要删除或移动该文件夹）。</li>
+  <li>在浏览器地址栏打开扩展管理页（Chromium 内核浏览器一般为 <code>chrome://extensions</code>、<code>edge://extensions</code> 或浏览器菜单中的"扩展程序"）。</li>
+  <li>打开页面上的"开发者模式"开关。</li>
+  <li>点击"加载已解压的扩展程序"，选择第 1 步解压出的 <code>xdm-browser-extension</code> 文件夹。</li>
+  <li>扩展列表中出现"XDM Integration Module"即安装完成。保持 XDM下载管理器运行，并在应用底栏打开"浏览器监视"开关。</li>
+</ol>
+
+<h2>数据与隐私</h2>
+<p>扩展只与本机上的 XDM下载管理器通信，不连接任何外部服务器。接管下载时，扩展会把该下载的地址、文件名以及完成下载所需的请求头（如 Referer、Cookie）发送给本机应用，应用只把这些信息用于向对应的下载服务器发起请求。详见<a href="privacy.html">隐私政策</a>。</p>
+
+<h2>卸载</h2>
+<p>在浏览器扩展管理页移除"XDM Integration Module"即可，然后可删除解压出的文件夹。</p>
+
+<h2>源代码与许可证</h2>
+<p>扩展源自开源项目 Xtreme Download Manager（作者 subhra74）的浏览器扩展，按本应用需要做了适配，遵循 GNU 通用公共许可证第 2 版（GPL-2.0）。源代码位于仓库的 <code>extension/</code> 目录：<a href="https://github.com/Red-Sa1t/XdmHarmony">GitHub</a> · <a href="https://gitcode.com/Red_Salt/XdmHarmony">GitCode</a>。</p>
+<p class="muted"><a href="index.html">返回首页</a></p>
+</body>
+</html>

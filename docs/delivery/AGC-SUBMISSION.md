@@ -56,7 +56,8 @@ XDM Download Manager is the native HarmonyOS port (GPL-2.0) of the open-source X
 
 1. **8597 本地端口**：应用运行时监听 127.0.0.1:8597，用途为浏览器扩展与本应用的本机对接（XDM 官方扩展协议，地址写死于扩展内），仅本机回环通信，不对外网开放、不接收外部连接。
 2. **后台行为**：仅在有活跃下载任务时申请 dataTransfer 长时任务（任务栏通知可见），任务完成即释放；无任何定时唤醒或静默后台活动。
-3. **设备形态**：主要面向 PC（2in1）形态设计，同时兼容手机；建议 PC 应用市场分区提审。
+3. **设备形态**：仅 PC（2in1）（2026-11-20 起 module.json5 只声明 2in1）。
+4. **浏览器扩展（可选功能）**：浏览器接管与网页视频识别需安装配套浏览器扩展（XDM Integration Module，MV3，GPL-2.0，未上架扩展商店），安装包与说明：https://red-sa1t.github.io/XdmHarmony/extension.html 。不安装扩展时，复制下载链接后应用会自动识别剪贴板并弹出新建下载，核心下载功能均可验证。
 
 ## 7. 上架待办清单（历史记录；最新待办见 RELEASE.md）
 
