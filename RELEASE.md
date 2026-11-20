@@ -9,7 +9,7 @@
 - **release 构建**：`entry-default-signed.hap` 8,999,226 B，sha256 `f2160e245d39a76ed422be6ab59bfa1939761d9acb8cc6ea15239ccbe55d0bc1`（2026-11-20，21 条目，无 sourceMaps；模拟器装包启动通过，bm dump deviceTypes=[2in1]）。注意：此包用**调试证书 + 调试 Profile** 签名，只能装机自测，**不能上传 AGC**（见"提交前仍需完成"第 2、3 项）。
 - **名称与图标**：参照 draw.io 的审核驳回（指南 1.20 名称/图标一致、9.4/9.5 他人商标），应用名改为「XDM下载管理器 / XDM Download Manager」，去掉含华为商标 Harmony 的旧名 XdmHarmony；AppScope 三语 `app_name`、EntryAbility 标签、窗口标题栏、任务栏一致（模拟器已确认）。图标为原创分层图标（蓝青渐变底 + 白色下载箭头与托盘），替换了 DevEco 模板默认图标；源文件 `store-listing/icon/`，由 `scripts/make-icon.py` 生成。
 - **商店素材**（`store-listing/`）：介绍文案 `应用介绍.md`（名称、简介、分类、关键词、介绍、新版本特性）；商店图标 1024/216；5 张配文展示图（1920×1080、1280×720、800×450 三种尺寸，`screenshots-promo/`，`scripts/make-promo.py` 生成）及原始截图 `raw/`。截图中的文件均为演示数据。
-- **隐私政策**：https://red-sa1t.github.io/XdmHarmony/privacy.html （源 `docs/privacy.html`，GitHub Pages）。
+- **隐私政策**：https://red-sa1t.github.io/XdmHarmony/privacy.html （源 `docs/privacy.html`，GitHub Pages）。浏览器扩展安装说明：https://red-sa1t.github.io/XdmHarmony/extension.html （扩展压缩包 `docs/xdm-browser-extension-3.3.zip`）。
 - **源码公开（GPL-2.0）**：完整历史在 GitCode https://gitcode.com/Red_Salt/XdmHarmony （main `d522252` 起）；GitHub https://github.com/Red-Sa1t/XdmHarmony 为源码快照（签名配置已移除，同 draw.io 公开仓库做法）。仓库根有 GPL-2.0 `LICENSE`；应用内"关于"展示版本、GPL-2.0 无担保声明、上游致谢与源码地址。
 - **键盘快捷键**（2026-11-20）：Ctrl+N 新建下载、Ctrl+A 全选当前列表、Delete 删除选中（弹确认）、Esc 取消选择、Ctrl+F 定位搜索框；搜索框获焦时 Delete/Ctrl+A/Esc 留给文本编辑。模拟器实测 Ctrl+A、Esc、Delete、Ctrl+N 生效；Ctrl+F 未实测（模拟器聚焦输入框会弹第三方输入法隐私协议，未代为同意）。
 - **商店版界面**：不可用的占位入口已移除（导出/导入、帮助、报告问题、检查更新、视频向导、队列/计划任务）；"移除已完成的任务"与"关于"已实现；内部测试页在 release 包中不可达（实测 `--ps page probe` 落主界面）。
@@ -28,7 +28,7 @@
 
 1. ~~设备类型~~：已改为只声明 2in1（2026-11-20）。
 2. ~~键盘快捷键~~：已补（2026-11-20，见上文）。若审核仍提出快捷键问题，按其具体条目补充。
-3. **浏览器扩展**：商店文案和第 4 张展示图宣传"浏览器一键接管"、网页视频下载，但扩展（`extension/`，MV3）只能以"加载未打包扩展"方式安装，没有上架任何浏览器扩展商店，也未在真实浏览器页面上验证过（模拟器验收是用 HTTP 模拟扩展请求）。审核员或用户可能装不上、验证不了。可选：把扩展发布到浏览器扩展商店并在文案里给出获取方式；或把文案改为以剪贴板识别、批量下载为主，扩展作为可选功能并附安装说明。
+3. **浏览器扩展**（2026-11-20 已缓解）：扩展仍只能手动加载（未上架任何浏览器扩展商店，也未在真实浏览器页面上验证过）。已做：项目站点提供安装说明与扩展压缩包 https://red-sa1t.github.io/XdmHarmony/extension.html ；商店文案、第 4 张展示图副标题、AGC 审核备注（AGC-SUBMISSION §6 第 4 条）均标明扩展为可选并给出获取方式，同时说明不装扩展时可靠剪贴板识别新建下载；隐私政策补充扩展的数据说明。仍可选做：把扩展发布到浏览器扩展商店（需你的开发者账号）。
 4. **名称里的"XDM"**：上游项目名，GPL 允许沿用；若审核认为与原项目混淆，备选改为纯描述性名称。
 5. **GitCode 历史中的签名配置**：GitCode 仓库历史里含 `build-profile.json5` 的签名配置（加密口令与本机证书路径，证书文件本身不在仓库）。如果该仓库是公开的，可考虑改为私有或清理历史；GitHub 快照不含这些内容。
 
@@ -45,6 +45,7 @@
 | 2026-11-19 | 展示图加配文（三种尺寸） | 提交 087dce7 |
 | 2026-11-19 | 隐私政策发布到 GitHub Pages；GitHub 源码快照；GitCode 推送到最新 | 提交 aada263、d522252 |
 | 2026-11-20 | 设备类型收窄为 2in1；主窗口键盘快捷键（Ctrl+N/Ctrl+A/Delete/Esc/Ctrl+F） | 本文件"已就绪"，DELIVERY D 档 1 |
+| 2026-11-20 | 浏览器扩展：Pages 安装说明与压缩包，文案/展示图/审核备注标明可选 | 提交 e5bf818 |
 | 2026-11-20 | 发布签名构建上架 .app（工程级 assembleApp），verify-app 通过、内嵌 Profile 与发布 Profile 一致 | 本文件"上传包" |
 
 模拟器覆盖不到、留待真机的项：真实网络路径与性能、PC 实机目录授权持久化与后台保活、真实浏览器页面捕获、右键菜单（此前已在真机上验证）。
@@ -57,7 +58,8 @@
 | `store-listing/icon/` | 商店图标 1024/216、应用内分层图标源文件 |
 | `store-listing/screenshots-promo/` | 配文展示图（三种尺寸，推荐上传） |
 | `store-listing/raw/` | 模拟器原始截图（备用，也是展示图的来源） |
-| `docs/privacy.html`、`docs/index.html` | 隐私政策与 Pages 首页 |
+| `docs/privacy.html`、`docs/index.html`、`docs/extension.html` | 隐私政策、Pages 首页、浏览器扩展安装说明 |
+| `docs/xdm-browser-extension-3.3.zip` | 浏览器扩展压缩包（由 `extension/` 打包，扩展有改动时需重新打包） |
 | `docs/delivery/AGC-SUBMISSION.md` | 权限用途、ACL 申请理由、审核备注、开源合规 |
 | `docs/delivery/DELIVERY.md` | 交付登记（测试证据、缺陷闭环、构建指纹） |
 | `scripts/make-icon.py`、`scripts/make-promo.py` | 重新生成图标与展示图 |
