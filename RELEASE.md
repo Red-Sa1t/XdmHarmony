@@ -5,16 +5,17 @@
 **应用名称**：XDM下载管理器（英文 XDM Download Manager）　**包名**：`com.neuohos.xdm`　**版本**：1.0.0（1000000）　**vendor**：`neuohos`　**设备类型**：仅 2in1（PC）
 
 已就绪：
-- **功能与质量**：除下载外的全部功能已在 PC 模拟器（2in1，API 24）全量检测，探针单元 P0~P7 全过并与真机基线一致；主机测试 630 项（625 通过、5 跳过）、Hypium 642/642（2026-11-20 runDir `2026-11-19T15-36-08-615Z-b552abf9`）。检测与修复明细见 `docs/delivery/DELIVERY.md` C.6 与 D 档 1。
+- **功能与质量**：除下载外的全部功能已在 PC 模拟器（2in1，API 24）全量检测，探针单元 P0~P7 全过并与真机基线一致；主机测试 630 项（625 通过、5 跳过）、Hypium 642/642（2026-11-20 runDir `2026-11-20T08-30-28-122Z-a5f2925e`）。检测与修复明细见 `docs/delivery/DELIVERY.md` C.6 与 D 档 1。
 - **release 构建**：`entry-default-signed.hap` 8,999,226 B，sha256 `f2160e245d39a76ed422be6ab59bfa1939761d9acb8cc6ea15239ccbe55d0bc1`（2026-11-20，21 条目，无 sourceMaps；模拟器装包启动通过，bm dump deviceTypes=[2in1]）。注意：此包用**调试证书 + 调试 Profile** 签名，只能装机自测，**不能上传 AGC**（见"提交前仍需完成"第 2、3 项）。
 - **名称与图标**：参照 draw.io 的审核驳回（指南 1.20 名称/图标一致、9.4/9.5 他人商标），应用名改为「XDM下载管理器 / XDM Download Manager」，去掉含华为商标 Harmony 的旧名 XdmHarmony；AppScope 三语 `app_name`、EntryAbility 标签、窗口标题栏、任务栏一致（模拟器已确认）。图标为原创分层图标（蓝青渐变底 + 白色下载箭头与托盘），替换了 DevEco 模板默认图标；源文件 `store-listing/icon/`，由 `scripts/make-icon.py` 生成。
 - **商店素材**（`store-listing/`）：介绍文案 `应用介绍.md`（名称、简介、分类、关键词、介绍、新版本特性）；商店图标 1024/216；5 张配文展示图（1920×1080、1280×720、800×450 三种尺寸，`screenshots-promo/`，`scripts/make-promo.py` 生成）及原始截图 `raw/`。截图中的文件均为演示数据。
 - **隐私政策**：https://red-sa1t.github.io/XdmHarmony/privacy.html （源 `docs/privacy.html`，GitHub Pages）。浏览器扩展安装说明：https://red-sa1t.github.io/XdmHarmony/extension.html （扩展压缩包 `docs/xdm-browser-extension-3.3.zip`）。
 - **源码公开（GPL-2.0）**：完整历史在 GitCode https://gitcode.com/Red_Salt/XdmHarmony （main `d522252` 起）；GitHub https://github.com/Red-Sa1t/XdmHarmony 为源码快照（签名配置已移除，同 draw.io 公开仓库做法）。仓库根有 GPL-2.0 `LICENSE`；应用内"关于"展示版本、GPL-2.0 无担保声明、上游致谢与源码地址。
+- **默认语言**（2026-11-20）：界面默认简体中文（Config 默认 `zh-Hans`，启动时生效）。模拟器系统语言为英文时全新安装实测为中文界面、窗口标题为「XDM下载管理器」；用户可在菜单语言中改为英文或跟随系统。
 - **键盘快捷键**（2026-11-20）：Ctrl+N 新建下载、Ctrl+A 全选当前列表、Delete 删除选中（弹确认）、Esc 取消选择、Ctrl+F 定位搜索框；搜索框获焦时 Delete/Ctrl+A/Esc 留给文本编辑。模拟器实测 Ctrl+A、Esc、Delete、Ctrl+N 生效；Ctrl+F 未实测（模拟器聚焦输入框会弹第三方输入法隐私协议，未代为同意）。
 - **商店版界面**：不可用的占位入口已移除（导出/导入、帮助、报告问题、检查更新、视频向导、队列/计划任务）；"移除已完成的任务"与"关于"已实现；内部测试页在 release 包中不可达（实测 `--ps page probe` 落主界面）。
 
-- **上传包（.app）**：`artifacts/XdmDownloadManager-1.0.0-release-signed.app`（2026-11-20 构建，3,885,391 B，SHA-256 `89caeb638fb83e70a71f85504b35553c3a2b8f6a41747462d5be8e3851d20795`）。发布证书签名（Release 证书，有效期至 2029-10-15，链至 Huawei CBG Root CA G2）；内嵌 Profile 与 `xdm_publishRelease.p7b` 逐字节一致（type release、app_gallery、`com.neuohos.xdm`、allowed-acls 含 READ_PASTEBOARD）；`hap-sign-tool verify-app` 校验 .app 通过，同次构建的发布签名 HAP 也校验通过。pack.info：Release、compatible 23 / target 24；包内 HAP `buildMode=release`、`debug=false`、deviceTypes 仅 2in1。.app 内的 HAP 为未签名形态，由 .app 整包签名覆盖（当前 SDK 的打包方式）。发布签名包不能直接装机，回归仍用调试签名包。
+- **上传包（.app）**：`artifacts/XdmDownloadManager-1.0.0-release-signed.app`（2026-11-20 重建，含默认中文界面，3,886,205 B，SHA-256 `e637e0668f452b6476af460177dbca49e870b5e152c0379b43453afd12830392`）。发布证书签名（Release 证书，有效期至 2029-10-15，链至 Huawei CBG Root CA G2）；内嵌 Profile 与 `xdm_publishRelease.p7b` 逐字节一致（type release、app_gallery、`com.neuohos.xdm`、allowed-acls 含 READ_PASTEBOARD）；`hap-sign-tool verify-app` 校验 .app 通过，同次构建的发布签名 HAP 也校验通过。pack.info：Release、compatible 23 / target 24；包内 HAP `buildMode=release`、`debug=false`、deviceTypes 仅 2in1。.app 内的 HAP 为未签名形态，由 .app 整包签名覆盖（当前 SDK 的打包方式）。发布签名包不能直接装机，回归仍用调试签名包。
 
 ## 提交前仍需完成（需开发者本人在 AGC 操作）
 
@@ -46,6 +47,7 @@
 | 2026-11-19 | 隐私政策发布到 GitHub Pages；GitHub 源码快照；GitCode 推送到最新 | 提交 aada263、d522252 |
 | 2026-11-20 | 设备类型收窄为 2in1；主窗口键盘快捷键（Ctrl+N/Ctrl+A/Delete/Esc/Ctrl+F） | 本文件"已就绪"，DELIVERY D 档 1 |
 | 2026-11-20 | 浏览器扩展：Pages 安装说明与压缩包，文案/展示图/审核备注标明可选 | 提交 e5bf818 |
+| 2026-11-20 | 默认界面语言改为简体中文；重建上架 .app | 本文件"已就绪" |
 | 2026-11-20 | 发布签名构建上架 .app（工程级 assembleApp），verify-app 通过、内嵌 Profile 与发布 Profile 一致 | 本文件"上传包" |
 
 模拟器覆盖不到、留待真机的项：真实网络路径与性能、PC 实机目录授权持久化与后台保活、真实浏览器页面捕获、右键菜单（此前已在真机上验证）。

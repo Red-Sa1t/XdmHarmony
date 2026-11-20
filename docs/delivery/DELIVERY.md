@@ -252,6 +252,7 @@ DevEco 模拟器「MateBook Pro」（pc_all_x86，HarmonyOS 6.1.1 API 24，devic
 | **分片引擎重复下载**（大文件临时目录膨胀：1.2GB 文件临时目录 3GB、2.4GB 文件 3.8GB 直至磁盘写满；进度条长时间停在 0%） | 高 | **2026-11-19**：根因=worker 在 setInterval 回调内 Task.sendData 报进度，本平台抛错后 reportDisabled，主线程 piece.downloaded 恒为 0、按 0 盲分裂，被分裂片往往已近写满→整段重下。改为 SharedArrayBuffer 共享状态（已写字节数+取消标志），主线程每 250ms 及分裂前轮询；进度消息只接受单调前进值。实测：300MB 文件临时目录峰值 301MB（修前 370MB）、500MB 限速下载暂停→恢复 MD5 一致、500MB 强杀重启续传 MD5 一致；P1-U2/P2-U1/P2-U2(S4)/P3-U1/P3-U2 与基线一致 |
 | 运行时切换语言后状态列/进度窗仍为旧语言；删除任务后进度窗残留；进度窗长 URL 只显示到最后一个 '/' | medium | **2026-11-19**：语言切换回调刷新缓存标签（状态列经 AppStorage 版本号重渲染）；删除时关闭对应进度窗；URL 按字符截断加省略号。模拟器复测通过 |
 | 上架风险项（设备类型声明了未测试的 phone；PC 端无任何键盘快捷键——draw.io 曾因此被驳回） | medium | **2026-11-20**：module.json5 deviceTypes 仅 2in1；主窗口 Ctrl+N/Ctrl+A/Delete/Esc/Ctrl+F（搜索框获焦时让出编辑键）。模拟器实测 Ctrl+A/Esc/Delete/Ctrl+N 生效，Ctrl+F 未实测（输入法隐私协议） |
+| 默认界面语言为英文（Config 默认 en-US 且每次启动强制应用，中文系统全新安装也显示英文） | medium | **2026-11-20**：默认改为 zh-Hans（面向国内应用市场）；已选过语言的用户不受影响。英文系统模拟器全新安装实测中文界面；主机 630/625/0/5、Hypium 642/642（runDir `2026-11-20T08-30-28-122Z-a5f2925e`） |
 
 ### 档 2 开放 medium
 

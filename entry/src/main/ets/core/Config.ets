@@ -29,7 +29,7 @@
  * 包装、categories: CategoryListDoc、userCredentials: UserCredentialListDoc；解析门=PieceAlgo.
  * parseChunksJson 同款（JSON.parse→as Doc→逐字段 typeof/Array.isArray 校验，任一不符回默认+warn），
  * init 一次性解析缓存、set 更新缓存+写回 JSON 串、getter 返回缓存数组拷贝。分类目录存
- * defaultFolderName 尾段（完整目录=downloadDir 拼接，D5）；language 存 i18n tag 默认 'en-US'（D1）；
+ * defaultFolderName 尾段（完整目录=downloadDir 拼接，D5）；language 存 i18n tag 默认 'zh-Hans'（2026-11-20，原 D1 为 'en-US'）；
  * fallbackUserAgent set 即持久化（源 ConfigIO 键表无此键=输入重启即失的源缺陷修复，D3）；
  * proxy 平铺 5 键 + getProxyInfo/setProxyInfo 组装/拆写（D6，本单元不接 HTTP 栈）；
  * notificationTimeOut 默认 0（:42 死常量 30000 无消费不移植，D4）；RunOnLogon 不落键（源 ConfigIO
@@ -91,7 +91,7 @@ const KEY_VIDEO_EXTENSIONS_JSON: string = 'videoExtensionsJson';
 const KEY_FILE_EXTENSIONS_JSON: string = 'fileExtensionsJson';
 /** Config.cs:72-77；ConfigIO.cs:101（3 项，源拼写 thwawte 原样保真） */
 const KEY_BLOCKED_HOSTS_JSON: string = 'blockedHostsJson';
-/** Config.cs:79；ConfigIO.cs:175（D1：存 i18n tag，默认 'en-US'） */
+/** Config.cs:79；ConfigIO.cs:175（D1：存 i18n tag，默认 'zh-Hans'） */
 const KEY_LANGUAGE: string = 'language';
 /** Config.cs:81；ConfigIO.cs:223（true→NOT_SET 跟随系统/false→LIGHT，设计书 §0-11） */
 const KEY_ALLOW_SYSTEM_DARK_THEME: string = 'allowSystemDarkTheme';
@@ -150,8 +150,9 @@ export const DEFAULT_FALLBACK_USER_AGENT: string =
 export const DEFAULT_NOTIFICATION_TIME_OUT: number = 0;
 export const DEFAULT_IS_BROWSER_MONITORING_ENABLED: boolean = true;
 export const DEFAULT_SHOW_NOTIFICATION: boolean = true;
-/** language 默认（D1：'en-US' 同貌源 "English"） */
-export const DEFAULT_LANGUAGE: string = 'en-US';
+/** language 默认：2026-11-20 起为简体中文 'zh-Hans'（面向国内应用市场；原 D1 为 'en-US' 同貌源 "English"）。
+ * 仅影响首次安装/未设置过语言的用户，已在"语言"对话框选过的值照常读回 */
+export const DEFAULT_LANGUAGE: string = 'zh-Hans';
 export const DEFAULT_ALLOW_SYSTEM_DARK_THEME: boolean = true;
 /** 枚举默认 0 值（Auto / AutoRename——两枚举 0 值语义方向相反，落库键恒 0 默认） */
 export const DEFAULT_FOLDER_SELECTION_MODE: number = 0;
