@@ -10,6 +10,8 @@
   table { border-collapse: collapse; width: 100%; } td, th { border: 1px solid #ccc; padding: 6px 10px; text-align: left; vertical-align: top; }
   code { background: #f2f3f5; padding: 1px 5px; border-radius: 4px; word-break: break-all; }
   .muted { color: #666; font-size: 14px; }
+  button.copy { margin-top: 4px; padding: 4px 12px; border: 1px solid #2a78ec; color: #2a78ec; background: #fff; border-radius: 6px; font-size: 14px; cursor: pointer; }
+  button.copy.done { background: #2a78ec; color: #fff; }
 </style>
 </head>
 <body>
@@ -18,11 +20,11 @@
 
 <table>
   <tr><th>分类</th><th>文件</th><th>大小</th><th>下载地址</th></tr>
-  <tr><td>文档</td><td>使用指南（PDF）</td><td>约 142 KB</td><td><code>https://red-sa1t.github.io/XdmHarmony/samples/xdm-guide.pdf</code></td></tr>
-  <tr><td>压缩</td><td>示例压缩包（ZIP）</td><td>约 23 KB</td><td><code>https://red-sa1t.github.io/XdmHarmony/samples/xdm-sample-pack.zip</code></td></tr>
-  <tr><td>音乐</td><td>示例音乐（MP3）</td><td>约 376 KB</td><td><code>https://red-sa1t.github.io/XdmHarmony/samples/xdm-sample-music.mp3</code></td></tr>
-  <tr><td>视频</td><td>示例视频（MP4，720p，30 秒）</td><td>约 7.4 MB</td><td><code>https://red-sa1t.github.io/XdmHarmony/samples/xdm-sample-video.mp4</code></td></tr>
-  <tr><td>程序</td><td>Xtreme Download Manager 9.0.11 Windows 安装包（上游项目官方发布，MSI）</td><td>约 63 MB</td><td><code>https://github.com/subhra74/xdm/releases/download/9.0.11/xdm-9.0.11-x64.msi</code></td></tr>
+  <tr><td>文档</td><td>使用指南（PDF）</td><td>约 142 KB</td><td><code>https://red-sa1t.github.io/XdmHarmony/samples/xdm-guide.pdf</code><br><button class="copy" data-url="https://red-sa1t.github.io/XdmHarmony/samples/xdm-guide.pdf">复制链接</button> <a href="https://red-sa1t.github.io/XdmHarmony/samples/xdm-guide.pdf">直接打开</a></td></tr>
+  <tr><td>压缩</td><td>示例压缩包（ZIP）</td><td>约 23 KB</td><td><code>https://red-sa1t.github.io/XdmHarmony/samples/xdm-sample-pack.zip</code><br><button class="copy" data-url="https://red-sa1t.github.io/XdmHarmony/samples/xdm-sample-pack.zip">复制链接</button> <a href="https://red-sa1t.github.io/XdmHarmony/samples/xdm-sample-pack.zip">直接打开</a></td></tr>
+  <tr><td>音乐</td><td>示例音乐（MP3）</td><td>约 376 KB</td><td><code>https://red-sa1t.github.io/XdmHarmony/samples/xdm-sample-music.mp3</code><br><button class="copy" data-url="https://red-sa1t.github.io/XdmHarmony/samples/xdm-sample-music.mp3">复制链接</button> <a href="https://red-sa1t.github.io/XdmHarmony/samples/xdm-sample-music.mp3">直接打开</a></td></tr>
+  <tr><td>视频</td><td>示例视频（MP4，720p，30 秒）</td><td>约 7.4 MB</td><td><code>https://red-sa1t.github.io/XdmHarmony/samples/xdm-sample-video.mp4</code><br><button class="copy" data-url="https://red-sa1t.github.io/XdmHarmony/samples/xdm-sample-video.mp4">复制链接</button> <a href="https://red-sa1t.github.io/XdmHarmony/samples/xdm-sample-video.mp4">直接打开</a></td></tr>
+  <tr><td>程序</td><td>Xtreme Download Manager 9.0.11 Windows 安装包（上游项目官方发布，MSI）</td><td>约 63 MB</td><td><code>https://github.com/subhra74/xdm/releases/download/9.0.11/xdm-9.0.11-x64.msi</code><br><button class="copy" data-url="https://github.com/subhra74/xdm/releases/download/9.0.11/xdm-9.0.11-x64.msi">复制链接</button> <a href="https://github.com/subhra74/xdm/releases/download/9.0.11/xdm-9.0.11-x64.msi">直接打开</a></td></tr>
 </table>
 <p class="muted">程序类示例为上游开源项目在 GitHub 发布的正式安装包，体积较大，适合体验多线程下载、暂停与继续。前四个文件由本项目在 GitHub Pages 提供。</p>
 
@@ -34,5 +36,21 @@
   <li>选中一项后点"打开"或"打开目录"；使用搜索、排序、删除；在菜单中查看设置、语言、关于。</li>
 </ol>
 <p class="muted"><a href="index.html">返回首页</a> · <a href="guide.html">使用指南</a> · <a href="extension.html">浏览器扩展安装说明（可选）</a></p>
+<script>
+// 点"复制链接"把地址放进剪贴板；回到 XDM下载管理器后应用会自动识别并弹出新建下载
+function fallbackCopy(text) {
+  const t = document.createElement('textarea'); t.value = text; t.style.position = 'fixed'; t.style.opacity = '0';
+  document.body.appendChild(t); t.select(); let ok = false; try { ok = document.execCommand('copy'); } catch (e) {} t.remove(); return ok;
+}
+document.querySelectorAll('button.copy').forEach(function (b) {
+  b.addEventListener('click', function () {
+    const url = b.dataset.url;
+    const done = function () { b.textContent = '已复制'; b.classList.add('done'); setTimeout(function () { b.textContent = '复制链接'; b.classList.remove('done'); }, 2500); };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(url).then(done, function () { if (fallbackCopy(url)) done(); });
+    } else if (fallbackCopy(url)) { done(); }
+  });
+});
+</script>
 </body>
 </html>
