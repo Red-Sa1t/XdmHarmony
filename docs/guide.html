@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>XDM下载管理器 使用指南</title>
+<style>
+  body { font-family: -apple-system, "HarmonyOS Sans", "PingFang SC", "Microsoft YaHei", sans-serif; max-width: 760px; margin: 0 auto; padding: 24px 16px; line-height: 1.7; color: #222; background: #fff; }
+  h1 { font-size: 24px; } h2 { font-size: 18px; margin-top: 26px; }
+  code { background: #f2f3f5; padding: 1px 5px; border-radius: 4px; }
+  table { border-collapse: collapse; width: 100%; } td, th { border: 1px solid #ccc; padding: 6px 10px; text-align: left; }
+  .muted { color: #666; font-size: 14px; }
+</style>
+</head>
+<body>
+<h1>XDM下载管理器 使用指南</h1>
+<p class="muted">适用版本 1.0.0 · 鸿蒙 PC</p>
+
+<h2>一、新建下载</h2>
+<ul>
+  <li><b>复制链接</b>：在任意位置复制一个下载链接，回到本应用即可自动识别并弹出"新建下载"，地址和文件名已预填，点"现在下载"开始。</li>
+  <li><b>新建按钮</b>：点工具栏"新建 › 新建下载"（或按 Ctrl+N），剪贴板里有链接时自动预填，也可手动粘贴。</li>
+  <li><b>批量下载</b>："新建 › 批量下载"可按编号规律一次添加多个文件。</li>
+  <li><b>浏览器扩展（可选）</b>：安装配套扩展后，在浏览器中点击下载链接即可交给本应用，详见扩展安装说明。</li>
+</ul>
+
+<h2>二、下载过程</h2>
+<ul>
+  <li>文件自动分成多段同时下载，进度窗口显示已下载大小、速度和剩余时间；点"不限速"可设置限速。</li>
+  <li>可随时暂停、继续；关闭应用或断网后再打开，可从中断处继续。</li>
+  <li>下载完成后弹出"下载完成"，可直接打开文件或所在目录。</li>
+</ul>
+
+<h2>三、管理下载</h2>
+<table>
+  <tr><th>位置</th><th>说明</th></tr>
+  <tr><td>进行中 / 已完成</td><td>两个标签分别列出未完成和已完成的任务</td></tr>
+  <tr><td>文档、音乐、视频、压缩、程序</td><td>左侧分类按文件类型自动归类，例如 PDF 归入文档、ZIP 归入压缩、MSI/EXE 归入程序</td></tr>
+  <tr><td>搜索、排序</td><td>右上角搜索文件名；点列标题按名称、时间、大小排序</td></tr>
+  <tr><td>删除</td><td>选中后点"删除"或按 Delete，可选择是否同时删除磁盘上的文件</td></tr>
+  <tr><td>菜单</td><td>设置、浏览器监视、媒体抓取、移除已完成的任务、语言、关于</td></tr>
+</table>
+
+<h2>四、快捷键</h2>
+<p>Ctrl+N 新建下载；Ctrl+A 全选当前列表；Delete 删除选中；Esc 取消选择；Ctrl+F 定位搜索框。</p>
+
+<h2>五、开源</h2>
+<p>本应用基于开源项目 Xtreme Download Manager（作者 subhra74）修改开发，遵循 GPL-2.0 发布。源代码：https://github.com/Red-Sa1t/XdmHarmony</p>
+</body>
+</html>
