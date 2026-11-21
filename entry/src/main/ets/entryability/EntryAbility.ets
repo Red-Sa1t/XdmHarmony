@@ -57,6 +57,7 @@ import { DownloadManager } from '../core/engine/DownloadManager';
 import { ProgressNotifier } from '../core/notify/ProgressNotifier';
 import { ClipboardWatcher } from '../core/clipboard/ClipboardWatcher';
 import { BridgeServer } from '../core/bridge/BridgeServer';
+import { SystemPromptGate } from '../core/util/SystemPromptGate';
 
 const DOMAIN = 0x0000;
 const DEFAULT_PAGE_PATH: string = 'pages/Index';
@@ -231,16 +232,22 @@ export default class EntryAbility extends UIAbility {
     if (stage === undefined) {
       return;
     }
+    // 通知授权弹窗占用系统授权门（loadContent 前登记，首帧收件箱弹窗即可看到 busy）
+    SystemPromptGate.begin();
     stage.loadContent(this.targetPage, (err) => {
       if (err.code) {
         hilog.error(DOMAIN, 'testTag', 'Failed to load the content. Cause: %{public}s', JSON.stringify(err));
+        SystemPromptGate.end();
         return;
       }
       hilog.info(DOMAIN, 'testTag', 'Succeeded in loading the content.');
       // U5.1 尾部追加（设计书 §1-#9②/§3.5）：通知授权前置——文档硬约束"仅可在 loadContent 成功后
       // 调用"；授权弹窗仅首次，拒绝后 1600004 无法再弹（D7：openNotificationSettingsWithResult
       // 不实装，只记日志不重试）；非首次调用恒成功，冷/暖启动重复调用无害
-      notificationManager.requestEnableNotification(this.context).catch((notifyErr: BusinessError) => {
+      notificationManager.requestEnableNotification(this.context).then((): void => {
+        SystemPromptGate.end();
+      }).catch((notifyErr: BusinessError) => {
+        SystemPromptGate.end();
         hilog.info(DOMAIN, 'testTag', '%{public}s', 'requestEnableNotification errCode=' +
           String(notifyErr.code) + ' errMessage=' + (notifyErr.message ?? ''));
       });

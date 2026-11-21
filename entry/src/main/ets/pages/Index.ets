@@ -126,6 +126,7 @@ import { finishedSize } from '../core/notify/NotifyAlgo';
 // InProgressPane/FinishedPane←:1711-1798 @Builder）
 import { CategoryPanel } from '../components/CategoryPanel';
 import { ToolbarBar, SEARCH_INPUT_ID } from '../components/ToolbarBar';
+import { SystemPromptGate } from '../core/util/SystemPromptGate';
 import { InProgressPane } from '../components/InProgressPane';
 import { FinishedPane } from '../components/FinishedPane';
 
@@ -352,6 +353,7 @@ struct Index {
     DownloadCreationService.getInstance().setAdmissionReady(false);
     DownloadCreationService.getInstance().subscribeAdded(this.addedListener);
     BridgeInbox.getInstance().subscribeChanged(this.inboxListener);
+    SystemPromptGate.subscribeIdle(this.inboxListener);
     DownloadManager.getInstance().init(this.buildEngineEvents(), this.buildManagerHooks());
     this.statusLabels = this.buildStatusLabels();
     this.loadDialogLabels();
@@ -380,6 +382,7 @@ struct Index {
     DownloadCreationService.getInstance().setAdmissionReady(false);
     DownloadCreationService.getInstance().unsubscribeAdded(this.addedListener);
     BridgeInbox.getInstance().unsubscribeChanged(this.inboxListener);
+    SystemPromptGate.unsubscribeIdle(this.inboxListener);
     if (this.activeInbox !== null) {
       BridgeInbox.getInstance().release(this.activeInbox.id);
       this.activeInbox = null;
@@ -666,6 +669,10 @@ struct Index {
 
   private openNextInbox(): void {
     if (!this.pageActive || !this.listReady || this.promptOpen) {
+      return;
+    }
+    // 系统授权弹窗在屏时 ArkUI 不挂接对话框（见 SystemPromptGate 头注），等授权结束后由 idle 回调补弹
+    if (SystemPromptGate.busy()) {
       return;
     }
     const inbox: BridgeInbox = BridgeInbox.getInstance();

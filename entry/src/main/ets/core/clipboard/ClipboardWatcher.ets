@@ -33,6 +33,7 @@ import { hilog } from '@kit.PerformanceAnalysisKit';
 import { BusinessError } from '@kit.BasicServicesKit';
 import { Config } from '../Config';
 import { isUriValid } from '../net/HttpProtocol';
+import { SystemPromptGate } from '../util/SystemPromptGate';
 
 /** 业务日志面（domain 0x0000 / tag 'ClipboardWatcher'） */
 const LOG_DOMAIN: number = 0x0000;
@@ -199,8 +200,10 @@ export class ClipboardWatcher {
     }
     const atManager: abilityAccessCtrl.AtManager = abilityAccessCtrl.createAtManager();
     const perms: Array<Permissions> = ['ohos.permission.READ_PASTEBOARD'];
+    SystemPromptGate.begin();
     return atManager.requestPermissionsFromUser(ctx, perms).then(
       (result: PermissionRequestResult): void => {
+        SystemPromptGate.end();
         // PermissionRequestResult 字段面（security/PermissionRequestResult.d.ts:43-113）：
         // permissions/authResults（0=授予，-1=拒绝，2=无效）/dialogShownResults?——无 grantedPermissions
         let granted: number = 0;
@@ -213,6 +216,7 @@ export class ClipboardWatcher {
           'permission requested granted=' + String(granted) +
           '/' + String(result.permissions.length));
       }).catch((err: BusinessError): void => {
+      SystemPromptGate.end();
       // COLD-F3：错误路径守卫复位——onCreate 早期申请（syncFromConfig→start，先于窗口就绪）
       // 若因窗口未就绪等报错，复位后 New 菜单（D18 显式入口）仍可达申请；仅 start()/New 菜单
       // 显式触发（D9 用户拒绝路径 flag 保持 true 不重弹），复位不造成重弹循环

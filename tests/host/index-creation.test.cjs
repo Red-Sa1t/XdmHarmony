@@ -31,7 +31,8 @@ function harness(store, service, inbox, platform = {}) {
   const context = { exports: {}, DownloadStore: { getInstance: () => store }, DownloadCreationService: { getInstance: () => service },
     BridgeInbox: { getInstance: () => inbox }, Config: { getInstance: () => ({ getDownloadDir: () => '/downloads' }) },
     DownloadCreationRequest: Request, BridgeInboxItem: class {}, cloneDownloadCreationRequest: request => structuredClone(request),
-    hilog: { error() {}, warn() {} }, setTimeout, openPrompts: new Set(), $r: value => value, ...platform };
+    hilog: { error() {}, warn() {} }, setTimeout, openPrompts: new Set(), $r: value => value,
+    SystemPromptGate: { busy: () => false, subscribeIdle() {}, unsubscribeIdle() {} }, ...platform };
   vm.runInNewContext(compiled, context);
   const index = new context.exports.IndexHarness();
   const dataSource = () => ({ records: [], initialize(records) { this.records = records; } });

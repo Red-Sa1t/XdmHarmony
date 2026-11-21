@@ -59,6 +59,8 @@ XDM Download Manager is the native HarmonyOS port (GPL-2.0) of the open-source X
 3. **设备形态**：仅 PC（2in1）（2026-11-20 起 module.json5 只声明 2in1）。
 4. **浏览器扩展（可选功能）**：浏览器接管与网页视频识别需安装配套浏览器扩展（XDM Integration Module，MV3，GPL-2.0，未上架扩展商店），安装包与说明：https://red-sa1t.github.io/XdmHarmony/extension.html 。不安装扩展时，复制下载链接后在应用中点"新建 › 新建下载"即自动填入地址，核心下载功能均可验证。
 
+5. **体验地址与演示录屏**：本应用需要下载地址才能体验，体验用地址（文档/压缩/音乐/视频/程序五类，含一键复制）：https://red-sa1t.github.io/XdmHarmony/samples.html ；使用方法：复制地址后在应用中点"新建 › 新建下载"即自动填入。使用指南：https://red-sa1t.github.io/XdmHarmony/guide.html 。完整演示录屏已上传至"自测文件"。
+
 ## 7. 上架待办清单（历史记录；最新待办见 RELEASE.md）
 
 - [ ] 真机连接 → `devecocli auth login` → `devecocli signature generate --product default`（新包名 Profile）

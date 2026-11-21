@@ -15,7 +15,17 @@
 - **键盘快捷键**（2026-11-20）：Ctrl+N 新建下载、Ctrl+A 全选当前列表、Delete 删除选中（弹确认）、Esc 取消选择、Ctrl+F 定位搜索框；搜索框获焦时 Delete/Ctrl+A/Esc 留给文本编辑。模拟器实测 Ctrl+A、Esc、Delete、Ctrl+N 生效；Ctrl+F 未实测（模拟器聚焦输入框会弹第三方输入法隐私协议，未代为同意）。
 - **商店版界面**：不可用的占位入口已移除（导出/导入、帮助、报告问题、检查更新、视频向导、队列/计划任务）；"移除已完成的任务"与"关于"已实现；内部测试页在 release 包中不可达（实测 `--ps page probe` 落主界面）。
 
-- **上传包（.app）**：`artifacts/XdmDownloadManager-1.0.0-release-signed.app`（2026-11-20 重建，含默认中文界面，3,886,205 B，SHA-256 `e637e0668f452b6476af460177dbca49e870b5e152c0379b43453afd12830392`）。发布证书签名（Release 证书，有效期至 2029-10-15，链至 Huawei CBG Root CA G2）；内嵌 Profile 与 `xdm_publishRelease.p7b` 逐字节一致（type release、app_gallery、`com.neuohos.xdm`、allowed-acls 含 READ_PASTEBOARD）；`hap-sign-tool verify-app` 校验 .app 通过，同次构建的发布签名 HAP 也校验通过。pack.info：Release、compatible 23 / target 24；包内 HAP `buildMode=release`、`debug=false`、deviceTypes 仅 2in1。.app 内的 HAP 为未签名形态，由 .app 整包签名覆盖（当前 SDK 的打包方式）。发布签名包不能直接装机，回归仍用调试签名包。
+- **上传包（.app）**：`artifacts/XdmDownloadManager-1.0.0-release-signed.app`（2026-11-22 重建，含首启授权弹窗修复，3,887,108 B，SHA-256 `d5a2618b6949e08988134c5cf2699e8d6d5a4e9749a27346e238332feaa8ad14`）。发布证书签名（Release 证书，有效期至 2029-10-15，链至 Huawei CBG Root CA G2）；内嵌 Profile 与 `xdm_publishRelease.p7b` 逐字节一致（type release、app_gallery、`com.neuohos.xdm`、allowed-acls 含 READ_PASTEBOARD）；`hap-sign-tool verify-app` 校验 .app 通过，同次构建的发布签名 HAP 也校验通过。pack.info：Release、compatible 23 / target 24；包内 HAP `buildMode=release`、`debug=false`、deviceTypes 仅 2in1。.app 内的 HAP 为未签名形态，由 .app 整包签名覆盖（当前 SDK 的打包方式）。发布签名包不能直接装机，回归仍用调试签名包。
+
+## 审核意见处理（2026-11-22，第 1 轮）
+
+**意见**："新建、压缩、程序等更多功能需要下载地址才能体验，需提供遍历使用的演示录屏"（测试环境 HarmonyOS 7.0 MateBook Pro、API 26）。
+
+**处理**：
+- **演示录屏**：`artifacts/XdmDownloadManager-1.0.0-审核演示录屏.mp4`（7 分 11 秒，1920×1280，12.6 MB，内嵌中文字幕；字幕文本 `artifacts/demo-captions.srt`）。在 PC 模拟器（MateBook Pro 镜像）上从启动器打开应用开始录制，依次演示：首次启动授权、在浏览器打开体验地址页并复制链接、新建下载自动填入、PDF/ZIP/MP3 下载与完成提示、63 MB 程序安装包的多线程下载与暂停/恢复、已完成列表与五个分类、排序、快捷键、删除、设置各页、开启"监视剪贴板"后复制即自动弹出新建下载、下载完成后打开并播放视频、媒体抓取、语言、关于。录制方式：设备端连续截屏（`snapshot_display`，约 3.6 帧/秒）按真实时间合成，脚本 `docs/probe/e2e/demo-record.cjs` + `demo-assemble.cjs`。上传位置：开发者管理 › 应用 › 分发 › 版本信息 › 应用审核信息 › 自测文件。
+- **体验地址**：https://red-sa1t.github.io/XdmHarmony/samples.html （文档 PDF、压缩 ZIP、音乐 MP3、视频 MP4 由本项目 Pages 提供，程序类为上游 XDM 9.0.11 官方 MSI 安装包；每个地址带"复制链接"按钮）。使用指南 https://red-sa1t.github.io/XdmHarmony/guide.html 。审核备注已加入这两个地址（AGC-SUBMISSION §6 第 5 条）。
+- **录制中发现并修复的缺陷**：全新安装首次启动时，系统通知授权弹窗在屏期间送达的新建下载提示不会显示，且之后的提示全部排队不弹（ArkUI 在模态授权弹窗期间拒绝挂接对话框，但对话框状态仍报"已出现"）。新增 `SystemPromptGate`：通知授权与剪贴板授权期间暂缓收件箱弹窗，授权结束 600 ms 后补弹。模拟器复现与修复后验证均已完成。
+- **说明更正**："监视剪贴板"默认关闭（与上游一致），体验页、指南、商店文案改为"复制链接后点新建 › 新建下载即自动填入；开启监视剪贴板后复制即自动弹出"，两条路径均已在录屏中演示。
 
 ## 提交前仍需完成（需开发者本人在 AGC 操作）
 
@@ -48,6 +58,7 @@
 | 2026-11-20 | 设备类型收窄为 2in1；主窗口键盘快捷键（Ctrl+N/Ctrl+A/Delete/Esc/Ctrl+F） | 本文件"已就绪"，DELIVERY D 档 1 |
 | 2026-11-20 | 浏览器扩展：Pages 安装说明与压缩包，文案/展示图/审核备注标明可选 | 提交 e5bf818 |
 | 2026-11-20 | 默认界面语言改为简体中文；重建上架 .app | 本文件"已就绪" |
+| 2026-11-22 | 审核意见第 1 轮：演示录屏、体验地址页与示例文件、使用指南；修复首启授权弹窗期间新建下载提示丢失；重建 .app | 本文件"审核意见处理" |
 | 2026-11-20 | 发布签名构建上架 .app（工程级 assembleApp），verify-app 通过、内嵌 Profile 与发布 Profile 一致 | 本文件"上传包" |
 
 模拟器覆盖不到、留待真机的项：真实网络路径与性能、PC 实机目录授权持久化与后台保活、真实浏览器页面捕获、右键菜单（此前已在真机上验证）。
@@ -61,6 +72,9 @@
 | `store-listing/screenshots-promo/` | 配文展示图（三种尺寸，推荐上传） |
 | `store-listing/raw/` | 模拟器原始截图（备用，也是展示图的来源） |
 | `docs/privacy.html`、`docs/index.html`、`docs/extension.html` | 隐私政策、Pages 首页、浏览器扩展安装说明 |
+| `docs/samples.html`、`docs/samples/`、`docs/guide.html` | 体验用下载地址页与示例文件、使用指南（Pages） |
+| `artifacts/XdmDownloadManager-1.0.0-审核演示录屏.mp4` | 审核演示录屏（不入库） |
+| `docs/probe/e2e/demo-record.cjs`、`demo-assemble.cjs` | 重新录制演示录屏 |
 | `docs/xdm-browser-extension-3.3.zip` | 浏览器扩展压缩包（由 `extension/` 打包，扩展有改动时需重新打包） |
 | `docs/delivery/AGC-SUBMISSION.md` | 权限用途、ACL 申请理由、审核备注、开源合规 |
 | `docs/delivery/DELIVERY.md` | 交付登记（测试证据、缺陷闭环、构建指纹） |
