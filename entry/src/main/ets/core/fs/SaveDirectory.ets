@@ -33,7 +33,8 @@ import { filePreview } from '@kit.PreviewKit';
 import { common, Want, wantConstant } from '@kit.AbilityKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { BusinessError } from '@kit.BasicServicesKit';
-import { updateRecentFolderList, manualDownloadFolder, FOLDER_MODE_MANUAL } from '../util/FolderAlgo';
+import { updateRecentFolderList, manualDownloadFolder, categoryFolderFor, FOLDER_MODE_MANUAL } from '../util/FolderAlgo';
+import { getUniqueFileName } from '../util/FileNames';
 import { Config } from '../Config';
 
 /** 业务日志面（domain 0x0000 / tag 'SaveDirectory'） */
@@ -117,53 +118,171 @@ export class SaveDirectory {
   /** 选中目录登记（Helpers.cs:318-320 三动作归并）：updateRecentFolderList 数学（头插/去重）
    * →setRecentFolders + setFolderSelectionMode(MANUAL) + setUserSelectedDownloadFolder。
    * 只写拷贝目标三键——绝不回填 downloadDir、绝不调 setDownloadDir（D4：防 URI 写入引擎目标键）。 */
-  static applyPickedFolder(uri: string): void {
+  static applyPickedFolder(uri: string, keepMode: boolean = false): void {
     if (uri.length === 0) {
       return;
     }
     const config: Config = Config.getInstance();
     config.setRecentFolders(updateRecentFolderList(config.getRecentFolders(), uri));
-    config.setFolderSelectionMode(FOLDER_MODE_MANUAL);
+    // 2026-11-22：设置页选目录只换目录、不改「根据文件类型自动选择保存位置」（keepMode）
+    if (!keepMode) {
+      config.setFolderSelectionMode(FOLDER_MODE_MANUAL);
+    }
     config.setUserSelectedDownloadFolder(uri);
   }
 
-  /** 拷贝目标解析（GetManualDownloadFolder 投影）：Manual 且结果带 file:// 前缀才返回；
-   * Auto/未选目录/沙箱路径→''（调用方无事发生）。 */
-  static copyTargetFolder(): string {
+  /** 用户选择的保存目录 URI（不看模式：userSelected 在 recentFolders 中优先，否则 recentFolders[0]）；未选→'' */
+  static userFolder(): string {
     const config: Config = Config.getInstance();
-    const folder: string | null = manualDownloadFolder(config.getFolderSelectionMode(),
-      config.getRecentFolders(), config.getUserSelectedDownloadFolder(), config.getDownloadDir());
+    const folder: string | null = manualDownloadFolder(FOLDER_MODE_MANUAL, config.getRecentFolders(),
+      config.getUserSelectedDownloadFolder(), '');
     if (folder === null || !folder.startsWith(FILE_URI_PREFIX)) {
       return '';
     }
     return folder;
   }
 
+  /** 成品拷贝目标目录 URI。2026-11-22 设置可用性修复：
+   *  - 手动（选过目录）：拷到所选目录；
+   *  - 「根据文件类型自动选择保存位置」勾选：拷到所选目录下对应分类子文件夹（分类取设置页
+   *    「下载类别」，按扩展名匹配，无匹配则所选目录本身）；未选过目录时成品留在应用内。 */
+  static copyTargetFolder(fileName: string = ''): string {
+    const base: string = SaveDirectory.userFolder();
+    if (base.length === 0) {
+      return '';
+    }
+    const config: Config = Config.getInstance();
+    if (config.getFolderSelectionMode() === FOLDER_MODE_MANUAL || fileName.length === 0) {
+      return base;
+    }
+    const sub: string = categoryFolderFor(fileName, config.getCategories());
+    if (sub.length === 0) {
+      return base;
+    }
+    return (base.endsWith('/') ? base : base + '/') + encodeURIComponent(sub);
+  }
+
+  /** URI → 本地路径（docs URI 的 path 段）；解析失败返回 '' */
+  static pathOfUri(uri: string): string {
+    try {
+      return new fileUri.FileUri(uri).path;
+    } catch (e) {
+      return '';
+    }
+  }
+
   /** 完成成品拷贝（D1 双轨用户目录半区）：copyTargetFolder ''→resolve(true) 无事；
    * fileIo.copy 沙箱成品→用户目录；失败 catch→hilog+false——文件留沙箱不删
    * （授权失效/重启后回退，调用方 toast msg_copy_failed 提示重选，D2）。fire-and-forget：
-   * 拷贝期间列表/后续下载不受阻（设计书 §3.6）。 */
-  static syncFinishedFile(filePath: string): Promise<boolean> {
-    const target: string = SaveDirectory.copyTargetFolder();
-    if (target.length === 0 || filePath.length === 0) {
-      return Promise.resolve(true);
+   * 拷贝期间列表/后续下载不受阻（设计书 §3.6）。
+   * 2026-11-22：分类子文件夹按需创建；「覆盖已有文件」未勾选时目标重名自动改名 name(1).ext；
+   * 「从服务器获取时间戳」开启时把成品 mtime 带到拷贝件。 */
+  static async syncFinishedFile(filePath: string): Promise<boolean> {
+    if (filePath.length === 0) {
+      return true;
+    }
+    const slash: number = filePath.lastIndexOf('/');
+    const baseName: string = slash >= 0 ? filePath.substring(slash + 1) : filePath;
+    let target: string = SaveDirectory.copyTargetFolder(baseName);
+    if (target.length === 0) {
+      return true;
+    }
+    const base: string = SaveDirectory.userFolder();
+    if (target !== base) {
+      const dir: string = SaveDirectory.pathOfUri(target);
+      try {
+        if (dir.length === 0) {
+          throw new Error('bad uri');
+        }
+        if (!fileIo.accessSync(dir)) {
+          fileIo.mkdirSync(dir);
+        }
+      } catch (e) {
+        hilog.error(LOG_DOMAIN, LOG_TAG, '%{public}s', 'category folder unavailable, using base folder');
+        target = base;
+      }
+    }
+    const config: Config = Config.getInstance();
+    const folderPath: string = SaveDirectory.pathOfUri(target);
+    let destName: string = baseName;
+    if (config.getFileConflictResolution() !== 1 && folderPath.length > 0) {
+      destName = getUniqueFileName(baseName, folderPath, (p: string): boolean => {
+        try {
+          return fileIo.accessSync(p);
+        } catch (e) {
+          return false;
+        }
+      });
     }
     const srcUri: string = fileUri.getUriFromPath(filePath);
     // dest 必须是文件 URI：传目录 URI 真机拒收 13900020 Invalid argument（2026-10-18 P5-U2 走查⑤
     // 实证，文档"file or directory"措辞不成立）。basename 经 encodeURIComponent 后拼到已编码的
     // folder URI 上——文件名含空格/#/?/% 时仍是合法 URI（COLD-F2 原顾虑由编码承担）。
-    const slash: number = filePath.lastIndexOf('/');
-    const baseName: string = slash >= 0 ? filePath.substring(slash + 1) : filePath;
-    const dest: string = (target.endsWith('/') ? target : target + '/') + encodeURIComponent(baseName);
-    return fileIo.copy(srcUri, dest).then((): boolean => {
-      hilog.info(LOG_DOMAIN, LOG_TAG, '%{public}s', 'finished file copied dest=' + dest);
-      return true;
-    }).catch((err: BusinessError): boolean => {
+    const dest: string = (target.endsWith('/') ? target : target + '/') + encodeURIComponent(destName);
+    try {
+      await fileIo.copy(srcUri, dest);
+    } catch (e) {
+      const err = e as BusinessError;
       hilog.error(LOG_DOMAIN, LOG_TAG, '%{public}s',
         'copy to user folder failed (file kept in sandbox) errCode=' + String(err.code) +
         ' errMessage=' + (err.message ?? ''));
       return false;
-    });
+    }
+    hilog.info(LOG_DOMAIN, LOG_TAG, '%{public}s', 'finished file copied dest=' + dest);
+    if (config.getFetchServerTimeStamp() && folderPath.length > 0) {
+      try {
+        const mtimeMs: number = fileIo.statSync(filePath).mtime * 1000;
+        fileIo.utimes(folderPath + '/' + destName, mtimeMs);
+      } catch (e) {
+        // 吞：时间戳是附加信息
+      }
+    }
+    return true;
+  }
+
+  /** 成品在用户目录中的拷贝所在文件夹 URI（按当前设置推算且文件确实存在）；没有则 '' */
+  static copiedFolderOf(fileName: string): string {
+    const candidates: string[] = [SaveDirectory.copyTargetFolder(fileName), SaveDirectory.userFolder()];
+    for (let i = 0; i < candidates.length; i++) {
+      const folder: string = candidates[i];
+      if (folder.length === 0) {
+        continue;
+      }
+      const dir: string = SaveDirectory.pathOfUri(folder);
+      try {
+        if (dir.length > 0 && fileIo.accessSync(dir + '/' + fileName)) {
+          return folder;
+        }
+      } catch (e) {
+        // 无权限/不存在
+      }
+    }
+    return '';
+  }
+
+  /** 打开目录：成品已拷到用户目录时，用系统文件选择器定位到该文件夹（鸿蒙无"在文件管理器中显示"
+   * 公开接口，选择器可浏览/打开该目录内文件）；否则回退为打开文件本身（D3 降级）。 */
+  static async openFolder(ctx: common.UIAbilityContext, path: string): Promise<boolean> {
+    const slash: number = path.lastIndexOf('/');
+    const name: string = slash >= 0 ? path.substring(slash + 1) : path;
+    const folder: string = SaveDirectory.copiedFolderOf(name);
+    if (folder.length === 0) {
+      return SaveDirectory.openFile(ctx, path, 'openFolder');
+    }
+    let uris: Array<string> = [];
+    try {
+      const documentPicker: picker.DocumentViewPicker = new picker.DocumentViewPicker(ctx);
+      const opts: picker.DocumentSelectOptions = { maxSelectNumber: 1, defaultFilePathUri: folder };
+      uris = await documentPicker.select(opts);
+    } catch (e) {
+      const err = e as BusinessError;
+      hilog.error(LOG_DOMAIN, LOG_TAG, '%{public}s', 'openFolder picker failed errCode=' + String(err.code));
+      return SaveDirectory.openFile(ctx, path, 'openFolder');
+    }
+    if (uris.length === 0) {
+      return true;
+    }
+    return SaveDirectory.openWithDefaultApp(ctx, uris[0], mimeForPath(uris[0]), 'openFolderPick');
   }
 
   /** 打开成品（Open/OpenFolder 共路）：accessSync 预检（File.Exists 同位）失败/异常→false
@@ -252,3 +371,16 @@ export class SaveDirectory {
 }
 
 const ANY_MIME: string = '*' + '/' + '*';
+
+/** 2026-11-22：用户目录 URI 的可读显示（docs URI 取 path 段并解码）；未选 → '' */
+export function displayFolder(uri: string): string {
+  if (uri.length === 0) {
+    return '';
+  }
+  const path: string = SaveDirectory.pathOfUri(uri);
+  try {
+    return decodeURIComponent(path.length > 0 ? path : uri);
+  } catch (e) {
+    return path.length > 0 ? path : uri;
+  }
+}

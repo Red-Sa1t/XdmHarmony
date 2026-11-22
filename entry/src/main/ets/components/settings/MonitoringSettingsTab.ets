@@ -208,7 +208,7 @@ export struct MonitoringSettingsTab {
             .onChange((value: boolean) => {
               this.showMediaNotification = value;
             })
-          Text($r('app.string.msg_show_media_notification'))
+          Text($r('app.string.lbl_show_finish_notification'))
             .fontSize(13)
             .layoutWeight(1)
         }

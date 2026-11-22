@@ -18,10 +18,27 @@
  * 日志：hilog domain 0x0000 tag 'HttpClient'（业务通道，绝不 [XDM_PROBE]）。
  */
 
-import { http } from '@kit.NetworkKit';
+import { http, connection } from '@kit.NetworkKit';
 import { BusinessError } from '@kit.BasicServicesKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { Config } from '../Config';
+import { TransportProxy, PROXY_CUSTOM, PROXY_DIRECT } from './TransportPolicy';
+
+/** 2026-11-22：代理决策 → HttpRequestOptions.usingProxy（系统代理=true，直连=false，自定义=HttpProxy） */
+export function usingProxyOf(proxy: TransportProxy | undefined): boolean | connection.HttpProxy {
+  if (proxy === undefined || proxy.mode === PROXY_DIRECT) {
+    return false;
+  }
+  if (proxy.mode === PROXY_CUSTOM) {
+    const custom: connection.HttpProxy = { host: proxy.host, port: proxy.port, exclusionList: [] };
+    if (proxy.user.length > 0) {
+      custom.username = proxy.user;
+      custom.password = proxy.password;
+    }
+    return custom;
+  }
+  return true;
+}
 
 /** dataEnd 门空闲超时：SDK 不保证断流时 dataEnd 触发——两次分块间隔超过该值才判 ended=false（防挂起）；
  * 不作总时长上限（独立复核 medium 修复：长下载不受硬顶，空闲语义由 dataReceive 重置计时承载） */
@@ -69,6 +86,7 @@ function makeEmptyHeader(): Record<string, string> {
 export class HttpClient {
   private readonly req: http.HttpRequest = http.createHttp();
   private readonly timeoutMs: number;
+  private readonly proxy: TransportProxy | undefined;
   /** abort 门：abort() resolve——open/waitStreamEnd 与其 race，保证 abort 后挂起协程必然放行 */
   private readonly abortGate: Promise<void>;
   private abortResolve: (() => void) | undefined = undefined;
@@ -92,7 +110,8 @@ export class HttpClient {
   /** 生成代：abort() 自增；调用方持有旧代号即可识别 abort 前的异步续体 */
   private generation: number = 0;
 
-  constructor(timeoutMs?: number) {
+  constructor(timeoutMs?: number, proxy?: TransportProxy) {
+    this.proxy = proxy;
     this.timeoutMs = timeoutMs !== undefined
       ? timeoutMs
       : Config.getInstance().getNetworkTimeout() * 1000;
@@ -119,6 +138,7 @@ export class HttpClient {
     const options: http.HttpRequestOptions = {
       header: header,
       usingCache: false,
+      usingProxy: usingProxyOf(this.proxy),
       connectTimeout: this.timeoutMs,
       readTimeout: STREAM_TRANSFER_CAP_MS
     };

@@ -45,6 +45,7 @@ import { common } from '@kit.AbilityKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { BusinessError } from '@kit.BasicServicesKit';
 import { CategoryDef, DEFAULT_CATEGORIES } from './util/CategoryAlgo';
+import { configureTransport, SavedCredential } from './net/TransportPolicy';
 import { ProxyInfo } from '../model/DownloadTypes';
 
 /** preferences 实例名（对照 settings.dat） */
@@ -400,6 +401,17 @@ export class Config {
       hilog.error(0x0000, 'XdmConfig', '%{public}s',
         'init failed errCode=' + String(err.code) + ' errMessage=' + (err.message ?? ''));
     }
+    this.syncTransport();
+  }
+
+  /** 2026-11-22：用户代理/代理/凭据同步到请求层（TransportPolicy） */
+  private syncTransport(): void {
+    const creds: SavedCredential[] = [];
+    for (let i = 0; i < this.userCredentials.length; i++) {
+      const c: UserCredential = this.userCredentials[i];
+      creds.push({ host: c.host, user: c.user, password: c.password });
+    }
+    configureTransport(this.fallbackUserAgent, this.getProxyInfo(), creds);
   }
 
   getDownloadDir(): string {
@@ -602,6 +614,7 @@ export class Config {
   setFallbackUserAgent(value: string): void {
     this.fallbackUserAgent = value;
     this.writeString(KEY_FALLBACK_USER_AGENT, value);
+    this.syncTransport();
   }
 
   /** 语言 i18n tag（'en-US'/'zh-Hans'/'default'，D1） */
@@ -865,6 +878,7 @@ export class Config {
   setUserCredentials(list: UserCredential[]): void {
     this.userCredentials = list.slice();
     this.writeString(KEY_USER_CREDENTIALS_JSON, this.serializeCredentials(this.userCredentials));
+    this.syncTransport();
   }
 
   /** Proxy 便捷组装（D6；本单元不接 HTTP 栈，U6.x HttpClient 消费） */
@@ -891,6 +905,7 @@ export class Config {
     this.writeNumber(KEY_PROXY_PORT, this.proxyPort);
     this.writeString(KEY_PROXY_USER, this.proxyUser);
     this.writeString(KEY_PROXY_PASSWORD, this.proxyPassword);
+    this.syncTransport();
   }
 
   /** raw 限速 setter（设计书 §0-8：设置页 NetworkSettingsView.UpdateConfig :52-56 是无规范化

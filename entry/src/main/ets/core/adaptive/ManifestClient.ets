@@ -10,7 +10,9 @@ import { DownloadRequestContext, cloneDownloadRequestContext, composeDownloadHea
 import { HLS_MAX_URL_CHARS } from './HlsModel';
 import { HLS_MAX_MANIFEST_CHARS } from './HlsParser';
 import { isAdaptiveHttpUrl } from './AdaptivePlan';
+import { currentRcpProxy } from './RcpProxy';
 import { resolveHlsUrl } from './HlsUrlResolver';
+
 
 export const MANIFEST_MAX_BYTES: number = HLS_MAX_MANIFEST_CHARS * 4;
 export const MANIFEST_MAX_REDIRECTS: number = 30;
@@ -245,7 +247,7 @@ export class ManifestClient {
         }
       };
       const tracing: rcp.TracingConfiguration = { verbose: false, httpEventsHandler: handlers };
-      const configuration: rcp.Configuration = { transfer: transfer, tracing: tracing };
+      const configuration: rcp.Configuration = { transfer: transfer, tracing: tracing, proxy: currentRcpProxy() };
       const cacheControl: rcp.CacheControl = { noCache: true, noStore: true };
       const sessionConfiguration: rcp.SessionConfiguration = {
         requestConfiguration: configuration, cacheControl: cacheControl

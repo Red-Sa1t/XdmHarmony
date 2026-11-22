@@ -919,6 +919,22 @@
     {
       "name": "app_name",
       "value": "XDM Download Manager"
+    },
+    {
+      "name": "settings_cat_subfolder",
+      "value": "Subfolder name (created inside the selected download folder)"
+    },
+    {
+      "name": "settings_folder_none",
+      "value": "Not selected: downloads are kept inside the app (open them from Finished)"
+    },
+    {
+      "name": "lbl_show_finish_notification",
+      "value": "Show a system notification when a download finishes"
+    },
+    {
+      "name": "proxy_type",
+      "value": "Proxy type"
     }
   ]
 }

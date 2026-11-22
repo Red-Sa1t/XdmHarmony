@@ -35,6 +35,8 @@ export struct FinishedPane {
   @BuilderParam headerBuilder: () => void;
   onSelectRow: (id: string) => void = (id: string): void => {
   };
+  onActivateRow: (id: string) => void = (id: string): void => {
+  };
   onToggleRowSelect: (id: string) => void = (id: string): void => {
   };
   onToggle: (id: string) => void = (id: string): void => {
@@ -60,6 +62,9 @@ export struct FinishedPane {
                 labels: this.statusLabels,
                 onSelect: (id: string): void => {
                   this.onSelectRow(id);
+                },
+                onActivate: (id: string): void => {
+                  this.onActivateRow(id);
                 },
                 onToggleSelect: (id: string): void => {
                   this.onToggleRowSelect(id);

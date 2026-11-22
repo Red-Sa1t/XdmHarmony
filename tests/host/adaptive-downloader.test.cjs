@@ -70,6 +70,7 @@ function setup(script) {
   const sinks = [];
   const plans = [];
   const config = { getTempDir: () => '/tmp/xdm', getDownloadDir: () => '/dl', getMaxSegments: () => 8,
+    getFileConflictResolution: () => 0,
     getMaxRetry: () => 3, getRetryDelay: () => 2, getNetworkTimeout: () => 30,
     getEnableSpeedLimit: () => script.limit !== undefined, getDefaultDownloadSpeed: () => script.limit ?? 0 };
   const mod = load('core/engine/AdaptiveDownloader', {

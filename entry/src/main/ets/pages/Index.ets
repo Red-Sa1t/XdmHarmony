@@ -1034,7 +1034,7 @@ struct Index {
       if (index === 1) {
         this.finishedDS.clearFilter();
       } else if (index - 2 >= 0 && index - 2 < DEFAULT_CATEGORIES.length) {
-        this.finishedDS.applyFilter('', DEFAULT_CATEGORIES[index - 2]);
+        this.finishedDS.applyFilter('', this.categoryAt(index - 2));
       } else {
         this.finishedDS.clearFilter();
       }
@@ -1069,11 +1069,24 @@ struct Index {
     this.activeView = index;
   }
 
+  /** 2026-11-22：左侧五个分类的扩展名取设置页「下载类别」中同名分类（用户编辑后即生效）；
+   * 分类被删除时该项不匹配任何文件 */
+  private categoryAt(i: number): CategoryDef {
+    const builtin: CategoryDef = DEFAULT_CATEGORIES[i];
+    const list: CategoryDef[] = Config.getInstance().getCategories();
+    for (let k = 0; k < list.length; k++) {
+      if (list[k].name === builtin.name) {
+        return list[k];
+      }
+    }
+    return new CategoryDef(builtin.name, builtin.displayName, [], builtin.defaultFolderName, true);
+  }
+
   /** 当前子分类（搜索过滤用；分类 0/1 → null=全部） */
   private currentCategory(): CategoryDef | null {
     const idx: number = this.activeCategoryIndex;
     if (idx >= 2 && idx - 2 < DEFAULT_CATEGORIES.length) {
-      return DEFAULT_CATEGORIES[idx - 2];
+      return this.categoryAt(idx - 2);
     }
     return null;
   }
@@ -1143,6 +1156,16 @@ struct Index {
     }
     this.selectedCount = this.selectedIds.size;
     this.recomputeToolbar();
+  }
+
+  /** 2026-11-22：双击下载项（WPF MouseDoubleClick 同位）：已完成按设置「双击下载项」打开文件或
+   * 打开目录；进行中打开进度窗口。 */
+  private activateRow(id: string, finished: boolean): void {
+    if (finished) {
+      this.handleOpenAction(Config.getInstance().getDoubleClickOpenFile() ? 'openFile' : 'openFolder');
+    } else {
+      this.onShowProgressMenu(id);
+    }
   }
 
   /** 单选替换（D3，WPF 单击选择语义）：先清全部选中再标新行 */
@@ -1218,7 +1241,7 @@ struct Index {
     counts[0] = this.inProgressCount;
     counts[1] = this.finishedCount;
     for (let i = 0; i < DEFAULT_CATEGORIES.length && i + 2 < counts.length; i++) {
-      counts[i + 2] = this.finishedDS.countByExtensions(DEFAULT_CATEGORIES[i].fileExtensions);
+      counts[i + 2] = this.finishedDS.countByExtensions(this.categoryAt(i).fileExtensions);
     }
     this.categoryCounts = counts;
   }
@@ -1374,8 +1397,12 @@ struct Index {
       return;
     }
     const path: string = record.targetDir + '/' + record.name;
-    // ctx 已窄化非 undefined（handleMenuExit 同款 downcast 惯例）
-    SaveDirectory.openFile(ctx as common.UIAbilityContext, path, button).then((ok: boolean): void => {
+    // ctx 已窄化非 undefined（handleMenuExit 同款 downcast 惯例）；2026-11-22：打开目录在成品已拷到
+    // 用户目录时用文件选择器定位到该目录
+    const uiCtx: common.UIAbilityContext = ctx as common.UIAbilityContext;
+    const pending: Promise<boolean> = button === 'openFolder'
+      ? SaveDirectory.openFolder(uiCtx, path) : SaveDirectory.openFile(uiCtx, path, button);
+    pending.then((ok: boolean): void => {
       if (!ok) {
         this.showOpenError($r('app.string.msg_file_not_found'));
       }
@@ -1984,6 +2011,10 @@ struct Index {
                 onSelectRow: (id: string): void => {
                   this.selectRow(id);
                 },
+                onActivateRow: (id: string): void => {
+                  this.selectRow(id);
+                  this.activateRow(id, false);
+                },
                 onToggleRowSelect: (id: string): void => {
                   this.toggleRowSelect(id);
                 },
@@ -2009,6 +2040,10 @@ struct Index {
                 },
                 onSelectRow: (id: string): void => {
                   this.selectRow(id);
+                },
+                onActivateRow: (id: string): void => {
+                  this.selectRow(id);
+                  this.activateRow(id, true);
                 },
                 onToggleRowSelect: (id: string): void => {
                   this.toggleRowSelect(id);

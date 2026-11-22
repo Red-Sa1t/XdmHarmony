@@ -919,6 +919,22 @@
     {
       "name": "app_name",
       "value": "XDM下载管理器"
+    },
+    {
+      "name": "settings_cat_subfolder",
+      "value": "子文件夹名称（在所选保存位置下创建）"
+    },
+    {
+      "name": "settings_folder_none",
+      "value": "未选择：下载保存在应用内（可在“已完成”中打开）"
+    },
+    {
+      "name": "lbl_show_finish_notification",
+      "value": "下载完成时显示系统通知"
+    },
+    {
+      "name": "proxy_type",
+      "value": "代理类型"
     }
   ]
 }

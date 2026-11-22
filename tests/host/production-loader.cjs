@@ -2,6 +2,10 @@
 const fs = require('node:fs');
 const vm = require('node:vm');
 
+const TRANSPORT_POLICY_FILE = require('node:path').join(__dirname, '../../entry/src/main/ets/core/net/TransportPolicy.ets');
+const RCP_PROXY_FILE = require('node:path').join(__dirname, '../../entry/src/main/ets/core/adaptive/RcpProxy.ets');
+let transportPolicy = null;
+
 function loadProduction(file, imports, globals = {}, expose = []) {
   const candidates = [process.env.XDM_TYPESCRIPT_PATH,
     'D:/Tools/DevEco Studio/tools/ohpm/node_modules/typescript/lib/typescript.js'].filter(Boolean);
@@ -26,6 +30,14 @@ function loadProduction(file, imports, globals = {}, expose = []) {
     setInterval: (fn, ms) => { const t = setInterval(fn, ms); if (t.unref) t.unref(); return t; },
     clearInterval: t => clearInterval(t),
     require(name) {
+      // 2026-11-22: TransportPolicy is pure (no @kit imports); load the real module when a test does not mock it.
+      // Tests that auto-stub every import with {} also get the real module.
+      if ((name.endsWith('/TransportPolicy') || name.endsWith('/RcpProxy')) &&
+        (!Object.hasOwn(imports, name) || Object.keys(imports[name] || {}).length === 0)) {
+        if (name.endsWith('/RcpProxy')) return loadProduction(RCP_PROXY_FILE, {});
+        if (!transportPolicy) transportPolicy = loadProduction(TRANSPORT_POLICY_FILE, {});
+        return transportPolicy;
+      }
       if (!Object.hasOwn(imports, name)) throw new Error('Unmocked production dependency: ' + name);
       return imports[name];
     }, ...globals });

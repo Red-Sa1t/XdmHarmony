@@ -22,7 +22,7 @@ import { hilog } from '@kit.PerformanceAnalysisKit';
 import { BusinessError } from '@kit.BasicServicesKit';
 import { Config } from '../../core/Config';
 import { CategoryDef, DEFAULT_CATEGORIES } from '../../core/util/CategoryAlgo';
-import { SaveDirectory } from '../../core/fs/SaveDirectory';
+import { SaveDirectory, displayFolder } from '../../core/fs/SaveDirectory';
 import { SettingsSession } from './SettingsSession';
 import { clampToRange, joinForEdit, parseCategoryTypes, RANGE_MAX_PARALLEL, RANGE_MIN }
   from '../../core/util/SettingParse';
@@ -66,10 +66,13 @@ export struct CategoryEditDialog {
       this.showMsg($r('app.string.msg_cat_file_types_missing'));
       return;
     }
-    if (this.folder.length === 0) {
+    const folderName: string = this.folder.trim();
+    if (folderName.length === 0 || folderName === '.' || folderName === '..' ||
+      folderName.indexOf('/') >= 0 || folderName.indexOf('\\') >= 0) {
       this.showMsg($r('app.string.msg_cat_folder_missing'));
       return;
     }
+    this.folder = folderName;
     this.onConfirm(this.categoryName, this.fileTypes, this.folder);
     this.controller?.close();
   }
@@ -77,12 +80,6 @@ export struct CategoryEditDialog {
   private handleCancel(): void {
     this.onCancel();
     this.controller?.close();
-  }
-
-  /** Browse 占位（FolderBrowserDialog 能力面 U5.2 接 picker，D5；当前 hilog 登记） */
-  private handleBrowse(): void {
-    hilog.info(0x0000, 'CategoryEdit', '%{public}s',
-      'category folder browse placeholder (D5: U5.2 picker pending)');
   }
 
   private showMsg(message: ResourceStr): void {
@@ -115,23 +112,15 @@ export struct CategoryEditDialog {
           this.fileTypes = value;
         })
         .width('100%')
-      Text($r('app.string.settings_cat_folder'))
+      // 2026-11-22：分类文件夹=所选保存目录下的子文件夹名（原 Browse 为无效占位，已移除）
+      Text($r('app.string.settings_cat_subfolder'))
         .fontSize(13)
         .width('100%')
-      Row({ space: 8 }) {
-        TextInput({ text: this.folder })
-          .layoutWeight(1)
-          .onChange((value: string) => {
-            this.folder = value;
-          })
-        Button($r('app.string.btn_browse'))
-          .fontSize(12)
-          .height(32)
-          .onClick(() => {
-            this.handleBrowse();
-          })
-      }
-      .width('100%')
+      TextInput({ text: this.folder })
+        .onChange((value: string) => {
+          this.folder = value;
+        })
+        .width('100%')
       Row({ space: 12 }) {
         Button($r('app.string.nd_cancel'))
           .onClick(() => {
@@ -218,7 +207,7 @@ export struct GeneralSettingsTab {
     this.maxParallelIndex = clampToRange(config.getMaxParallelDownloads(), RANGE_MIN,
       RANGE_MAX_PARALLEL) - RANGE_MIN;
     this.autoCat = config.getFolderSelectionMode() === 0;
-    this.downloadFolderText = config.getDownloadDir();
+    this.downloadFolderText = displayFolder(SaveDirectory.userFolder());
     this.dblClickIndex = config.getDoubleClickOpenFile() ? 1 : 0;
     const cats: CategoryDef[] = config.getCategories();
     const mirror: CategoryDef[] = [];
@@ -237,13 +226,11 @@ export struct GeneralSettingsTab {
     config.setStartDownloadAutomatically(this.startAuto);
     // :62-63 勾=Overwrite(1)/不勾=AutoRename(0)——与 folderSelectionMode 的 0 值方向相反
     config.setFileConflictResolution(this.overwriteExisting ? 1 : 0);
-    config.setTempDir(this.tempFolderText);
     config.setMaxParallelDownloads(clampToRange(this.maxParallelIndex + RANGE_MIN, RANGE_MIN,
       RANGE_MAX_PARALLEL));
     config.setCategories(this.categories);
     // :68-69 勾=Auto(0)/不勾=Manual(1)
     config.setFolderSelectionMode(this.autoCat ? 0 : 1);
-    config.setDownloadDir(this.downloadFolderText);
     config.setAllowSystemDarkTheme(this.darkTheme);
     config.setDoubleClickOpenFile(this.dblClickIndex === 1);
   }
@@ -334,13 +321,6 @@ export struct GeneralSettingsTab {
     this.selectedCatIndex = -1;
   }
 
-  /** 目录 Browse 占位（temp/category 维持占位——U5.2 D8：URI 不能作沙箱 tempDir/分类尾段目录，
-   * 语义不兼容；hilog 登记原样） */
-  private handleBrowsePlaceholder(kind: string): void {
-    hilog.info(0x0000, 'GeneralSettings', '%{public}s',
-      'folder browse placeholder kind=' + kind + ' (D8: URI incompatible with sandbox path keys)');
-  }
-
   /** downloadDir Browse（U5.2 真实能力接线，拍板⑩/D4）：DocumentViewPicker 选目录→
    * applyPickedFolder 写拷贝目标三键（recentFolders/folderSelectionMode=Manual/
    * userSelectedDownloadFolder——Helpers.cs:318-320 三动作）→toast 视觉反馈。
@@ -356,7 +336,8 @@ export struct GeneralSettingsTab {
       if (uri === null) {
         return;
       }
-      SaveDirectory.applyPickedFolder(uri);
+      SaveDirectory.applyPickedFolder(uri, true);
+      this.downloadFolderText = displayFolder(uri);
       const toastOpts: promptAction.ShowToastOptions = { message: $r('app.string.msg_folder_picked') };
       // showToast 在 PromptAction 类上（@ohos.arkui.UIContext.d.ts:987/:1015），UIContext 无
       // 此属性——经 getPromptAction() 取实例（设计书 §1-#15 原文即此调用形态）
@@ -432,30 +413,29 @@ export struct GeneralSettingsTab {
         Text($r('app.string.lbl_temp_folder'))
           .fontSize(13)
           .width('100%')
-        Row({ space: 8 }) {
-          TextInput({ text: this.tempFolderText })
-            .layoutWeight(1)
-            .onChange((value: string) => {
-              this.tempFolderText = value;
-            })
-          Button($r('app.string.btn_browse'))
-            .fontSize(12)
-            .height(32)
-            .onClick(() => {
-              this.handleBrowsePlaceholder('temp');
-            })
-        }
-        .width('100%')
+        // 2026-11-22：缓存目录固定在应用沙箱内（鸿蒙应用不能把临时分片写到沙箱外），只读显示
+        Text(this.tempFolderText)
+          .fontSize(12)
+          .opacity(0.7)
+          .width('100%')
+          .padding({ left: 8, right: 8, top: 6, bottom: 6 })
+          .borderRadius(6)
+          .backgroundColor($r('app.color.control_bg'))
+          .wordBreak(WordBreak.BREAK_ALL)
 
         Text($r('app.string.settings_folder'))
           .fontSize(13)
           .width('100%')
         Row({ space: 8 }) {
-          TextInput({ text: this.downloadFolderText })
+          // 2026-11-22：显示已选保存目录（只读，经"浏览"选择）；未选时下载保存在应用内
+          Text(this.downloadFolderText.length > 0 ? this.downloadFolderText
+            : $r('app.string.settings_folder_none'))
+            .fontSize(12)
             .layoutWeight(1)
-            .onChange((value: string) => {
-              this.downloadFolderText = value;
-            })
+            .padding({ left: 8, right: 8, top: 6, bottom: 6 })
+            .borderRadius(6)
+            .backgroundColor($r('app.color.control_bg'))
+            .wordBreak(WordBreak.BREAK_ALL)
           Button($r('app.string.btn_browse'))
             .fontSize(12)
             .height(32)

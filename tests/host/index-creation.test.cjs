@@ -209,7 +209,7 @@ for (const file of ['NewDownloadDialog', 'DownloadSelectionDialog']) {
     for (const reject of [false, true]) {
       test(`${file}.${operation}: stale ${reject ? 'failure' : 'success'} cannot close or update a replacement dialog`, async () => {
         const pending = deferred();
-        const context = { exports: {}, isUriValid: () => true, sanitizeFileName: value => value,
+        const context = { exports: {}, isUriValid: () => true, sanitizeFileName: value => value, fileNameFromUrl: () => '',
           FileNameFetchMode: { None: 0, FileNameAndExtension: 2 }, $r: value => value };
         const code = 'class Dialog {\n' + method(operation, exported) + '\n}\nexports.Dialog = Dialog;';
         vm.runInNewContext(ts.transpileModule(code, { compilerOptions: { target: ts.ScriptTarget.ES2020 } }).outputText, context);

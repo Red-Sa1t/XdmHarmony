@@ -59,6 +59,9 @@ export struct DownloadListItem {
   };
   onSelect: (id: string) => void = (id: string): void => {
   };
+  /** 2026-11-22：双击行（设置「双击下载项」） */
+  onActivate: (id: string) => void = (id: string): void => {
+  };
   onToggleSelect: (id: string) => void = (id: string): void => {
   };
   onToggle: (id: string) => void = (id: string): void => {
@@ -180,9 +183,14 @@ export struct DownloadListItem {
         }
       }
       .layoutWeight(1)
-      .onClick(() => {
-        this.onSelect(this.record.id);
-      })
+      // 2026-11-22：双击优先识别（打开/进度窗口），单击=选中
+      .gesture(GestureGroup(GestureMode.Exclusive,
+        TapGesture({ count: 2 }).onAction(() => {
+          this.onActivate(this.record.id);
+        }),
+        TapGesture({ count: 1 }).onAction(() => {
+          this.onSelect(this.record.id);
+        })))
 
       if (this.showToggle) {
         Row() {

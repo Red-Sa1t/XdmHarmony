@@ -191,11 +191,14 @@ export struct NetworkSettingsTab {
           .width('100%')
 
         Row({ space: 8 }) {
-          Text($r('app.string.desc_host'))
+          // 2026-11-22：标签改为「代理类型」，并显示当前选中项（原 Select 未设 value，显示为空）
+          Text($r('app.string.proxy_type'))
             .fontSize(13)
             .width(90)
           Select(this.proxyOptions())
             .selected(this.proxyTypeIndex)
+            .value(this.proxyTypeIndex === 1 ? $r('app.string.nd_no_proxy')
+              : this.proxyTypeIndex === 2 ? $r('app.string.nd_manual_proxy') : $r('app.string.net_system_proxy'))
             .onSelect((index: number, value: string) => {
               this.proxyTypeIndex = index;
             })

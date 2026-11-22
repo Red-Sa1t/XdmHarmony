@@ -1,6 +1,7 @@
 import { rcp } from '@kit.RemoteCommunicationKit';
 import { url } from '@kit.ArkTS';
 import { BusinessError } from '@kit.BasicServicesKit';
+import { currentRcpProxy } from './RcpProxy';
 import { DownloadRequestContext, cloneDownloadRequestContext, composeDownloadHeaders } from '../../model/DownloadRequestContext';
 import { AdaptiveAttemptIdentity } from './AdaptiveScheduler';
 import { AdaptiveRequestWindow, AdaptiveResponseHead } from './AdaptiveProtocol';
@@ -322,7 +323,7 @@ export class AdaptiveRcpStream {
       const timeout: rcp.Timeout = { connectMs: Math.min(this.request.networkDeadlineMs, remaining), transferMs: remaining };
       const transfer: rcp.TransferConfiguration = { autoRedirect: false, timeout: timeout };
       const tracing: rcp.TracingConfiguration = { verbose: false, httpEventsHandler: makeHandlers(hop.fence) };
-      const configuration: rcp.Configuration = { transfer: transfer, tracing: tracing };
+      const configuration: rcp.Configuration = { transfer: transfer, tracing: tracing, proxy: currentRcpProxy() };
       const cacheControl: rcp.CacheControl = { noCache: true, noStore: true };
       const sessionConfiguration: rcp.SessionConfiguration = { requestConfiguration: configuration, cacheControl: cacheControl };
       hop.session = rcp.createSession(sessionConfiguration); this.facts.sessionCount++; this.facts.allSessionsApiClosed = false;

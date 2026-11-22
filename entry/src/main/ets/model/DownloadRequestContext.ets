@@ -5,6 +5,7 @@
  * Engine-owned Range and identity override browser values. Never log serialized contexts.
  */
 import { sixDefaultHeaders } from '../core/net/HttpProtocol';
+import { AuthSetting, authorizationFor } from '../core/net/TransportPolicy';
 
 export interface DownloadRequestHeaders {
   names: string[];
@@ -88,7 +89,7 @@ export function serializeDownloadRequestContext(context: DownloadRequestContext)
 
 /** Returns a fresh HTTP dictionary. Range is exclusively supplied by the engine, never the browser. */
 export function composeDownloadHeaders(url: string, context: DownloadRequestContext,
-  range: string | null = null): Record<string, string> {
+  range: string | null = null, auth: AuthSetting | null = null): Record<string, string> {
   // Validate before any request, including contexts that have not yet gone through persistence.
   serializeDownloadRequestContext(context);
   const result: Record<string, string> = {};
@@ -124,6 +125,14 @@ export function composeDownloadHeaders(url: string, context: DownloadRequestCont
     // HTTP names are case-insensitive; avoid the ordinary object's __proto__ setter.
     const outputName: string = name === '__proto__' ? '__Proto__' : name;
     result[outputName] = valueLists[i].join(name === 'cookie' ? '; ' : ', ');
+  }
+  // 2026-11-22：手动添加（无浏览器头）时 UA 取设置页用户代理（见 sixDefaultHeaders）；未带
+  // Authorization 时用下载自带认证或设置页「密码管理」中该主机的凭据（Basic）
+  if (names.indexOf('authorization') < 0) {
+    const authorization: string = authorizationFor(url, auth);
+    if (authorization.length > 0) {
+      result['Authorization'] = authorization;
+    }
   }
   result['Accept-Encoding'] = 'identity';
   if (context.cookies !== null) {

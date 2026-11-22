@@ -368,9 +368,14 @@ export class AdaptiveDownloader {
       ? this.record.targetDir : Config.getInstance().getDownloadDir();
     try { await fileIo.mkdir(targetDir, true); } catch (_) { /* exists */ }
     const wanted: string = adaptiveOutputName(this.record.name, assembled.extension);
-    const unique: string = getUniqueFileName(wanted, targetDir, (path: string): boolean => {
+    // 2026-11-22：设置「覆盖已有文件」——勾选时先删同名旧文件再落位，否则自动改名
+    const overwrite: boolean = Config.getInstance().getFileConflictResolution() === 1;
+    const unique: string = overwrite ? wanted : getUniqueFileName(wanted, targetDir, (path: string): boolean => {
       try { return fileIo.accessSync(path); } catch (_) { return false; }
     });
+    if (overwrite) {
+      try { await fileIo.unlink(targetDir + '/' + unique); } catch (_) { /* absent */ }
+    }
     const target: string = targetDir + '/' + unique;
     try {
       await fileIo.rename(source, target);

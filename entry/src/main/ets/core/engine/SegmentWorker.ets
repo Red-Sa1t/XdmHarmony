@@ -65,6 +65,7 @@ import { fileIo } from '@kit.CoreFileKit';
 import { BusinessError } from '@kit.BasicServicesKit';
 import systemDateTime from '@ohos.systemDateTime';
 import { HttpClient, HttpResponseHead } from '../net/HttpClient';
+import { TransportProxy } from '../net/TransportPolicy';
 import {
   headerValueOf,
   isCompressed,
@@ -100,6 +101,8 @@ export interface WorkerParams {
    * 取消标志与 Task.isCanceled() 并用（任一为真即停写），缺省（单测直调）时仅依赖 isCanceled。 */
   cancelFlag?: SharedArrayBuffer;
   headers: Record<string, string>;
+  /** 2026-11-22：代理决策（主线程按下载自带代理/设置页全局代理解析；缺省=直连） */
+  proxy?: TransportProxy;
   /** U3.2 每 worker 限速份额（KB/s；主线程 perWorkerLimitKBps 均摊后注入——worker 禁触 Config
    * 单例纪律的唯一传值通道，D1/D2）。0/<1=不限速（默认——限速关闭走原直写路径，零回归承诺）；
    * 探测尝试派发时恒 0（探测取头即 abort 不涉限速）。 */
@@ -119,6 +122,8 @@ export interface WorkerConnectedMsg {
   contentRange: string;
   contentType: string;
   compressed: boolean;
+  /** 2026-11-22：Last-Modified 原值（设置「从服务器获取时间戳」用；缺失为空串） */
+  lastModified: string;
 }
 
 /** progress 中途消息（=原版 UpdateDownloadedBytesCount 共享内存计数的消息化，250ms 周期，D2） */
@@ -216,7 +221,7 @@ export async function segmentWorkerTask(params: WorkerParams): Promise<string> {
   const limiter: SpeedLimiter = new SpeedLimiter(params.speedLimitKBps);
   // HttpClient 显式传 timeoutMs（@Concurrent 纪律：禁落 Config 单例）；let 化支持水位溢出
   // 原地重连时换新实例（fd 跨重连保持——追加写位置不变，D3）
-  let client: HttpClient = new HttpClient(params.timeoutMs);
+  let client: HttpClient = new HttpClient(params.timeoutMs, params.proxy);
   // 局部 fd 生命周期（约束④：只存在于本次尝试栈帧，finally closeSync）
   let fd: number = -1;
   let written: number = 0;
@@ -455,7 +460,8 @@ export async function segmentWorkerTask(params: WorkerParams): Promise<string> {
           contentLength: contentLength,
           contentRange: result.contentRange,
           contentType: result.contentType,
-          compressed: isCompressed(head.header)
+          compressed: isCompressed(head.header),
+          lastModified: headerValueOf(head.header, 'last-modified')
         };
         taskpool.Task.sendData(JSON.stringify(connectedMsg));
 
@@ -506,7 +512,7 @@ export async function segmentWorkerTask(params: WorkerParams): Promise<string> {
         }
         burstReopenCount++;
         // 旧 client 已 abort（abort 幂等，finally 再调无害）；fd 跨重连保持（追加写）
-        client = new HttpClient(params.timeoutMs);
+        client = new HttpClient(params.timeoutMs, params.proxy);
         client.onChunk = chunkHandler;
         firstOpen = false;
         continue;

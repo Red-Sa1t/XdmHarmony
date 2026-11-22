@@ -109,6 +109,7 @@ import {
   ContentRangeParts
 } from '../net/HttpProtocol';
 import { composeDownloadHeaders } from '../../model/DownloadRequestContext';
+import { parseHttpDate, resolveProxy } from '../net/TransportPolicy';
 import { DownloadRunRequest } from '../../model/DownloadRunRequest';
 import { resolveRunRequest } from './DownloadRequestState';
 import { getUniqueFileName } from '../util/FileNames';
@@ -180,6 +181,8 @@ export class PieceScheduler {
   private totalSize: number = -1;
   private generation: number = 0;
   private stopRequested: boolean = false;
+  /** 2026-11-22：任一分片响应的 Last-Modified（设置「从服务器获取时间戳」在组装后写回 mtime） */
+  private serverLastModified: string = '';
   private running: boolean = false;
   /** 共享进度轮询定时器（-1=未启动；见 pollSharedProgress） */
   private sharedPollTimer: number = -1;
@@ -514,7 +517,7 @@ export class PieceScheduler {
     const range: string = openWindow ? 'bytes=0-' : closedRangeHeader(windowStart, windowEnd);
     let headers: Record<string, string>;
     try {
-      headers = composeDownloadHeaders(url, request.context, range);
+      headers = composeDownloadHeaders(url, request.context, range, this.record.authentication);
     } catch (e) {
       // Invalid credentials must terminate the session, not strand an admitted manager slot.
       // Do not include the context or exception message in logs.
@@ -546,6 +549,7 @@ export class PieceScheduler {
       attempt: attempt,
       cancelFlag: cancelFlag,
       headers: headers,
+      proxy: resolveProxy(this.record.proxy),
       speedLimitKBps: shareKBps
     };
     const task: taskpool.Task = new taskpool.Task(segmentWorkerTask, params);
@@ -778,8 +782,27 @@ export class PieceScheduler {
   }
 
   /** connected 消息分派（双轴纪律：校验语义按 openWindow、探测值处理按 probeMode）。 */
+  /** 2026-11-22：「从服务器获取时间戳」——成品 mtime 设为服务器 Last-Modified（缺失/无效则保持当前时间） */
+  private applyServerTimestamp(path: string): void {
+    if (!Config.getInstance().getFetchServerTimeStamp()) {
+      return;
+    }
+    const ms: number = parseHttpDate(this.serverLastModified);
+    if (ms <= 0) {
+      return;
+    }
+    try {
+      fileIo.utimes(path, ms);
+    } catch (e) {
+      // 吞：时间戳是附加信息，不影响下载结果
+    }
+  }
+
   private onConnectedMsg(record: DispatchRecord, msg: WorkerConnectedMsg): void {
     this.lastStatusById.set(record.pieceId, msg.status);
+    if (typeof msg.lastModified === 'string' && msg.lastModified.length > 0) {
+      this.serverLastModified = msg.lastModified;
+    }
     // :181-188 compressed 防御主线程落位：206 视作 200（总长-1/禁续传在 probeConnected 推导吸收）
     let effectiveStatus: number = msg.status;
     if (msg.compressed && msg.status === 206) {
@@ -1159,7 +1182,9 @@ export class PieceScheduler {
         return false;
       }
     };
-    const uniqueName: string = getUniqueFileName(baseName, targetDir, existsFn);
+    // 2026-11-22：设置「覆盖已有文件」勾选时直接覆盖同名文件，否则自动改名（name(1).ext）
+    const uniqueName: string = Config.getInstance().getFileConflictResolution() === 1
+      ? baseName : getUniqueFileName(baseName, targetDir, existsFn);
     const finalPath: string = targetDir + '/' + uniqueName;
     const sizeKnown: number = this.fileSize > 0 ? this.fileSize : this.totalSize;
     // 盘空间预检（§0-11 照译 :318-325；statvfs 抛错吞 → 跳过检查）
@@ -1237,6 +1262,7 @@ export class PieceScheduler {
       fileIo.closeSync(outFd);
       outFd = -1;
       this.deleteTempDir();
+      this.applyServerTimestamp(finalPath);
       let finalSize: number = totalBytes;
       try {
         finalSize = fileIo.statSync(finalPath).size;

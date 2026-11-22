@@ -22,7 +22,8 @@
 
 import { isUriValid } from '../core/net/HttpProtocol';
 import { sanitizeFileName, fileNameFromUrl } from '../core/util/FileNames';
-import { manualDownloadFolder } from '../core/util/FolderAlgo';
+import { FOLDER_MODE_MANUAL } from '../core/util/FolderAlgo';
+import { SaveDirectory, displayFolder } from '../core/fs/SaveDirectory';
 import { FileNameFetchMode } from '../model/DownloadTypes';
 import { Config } from '../core/Config';
 
@@ -60,6 +61,10 @@ export struct NewDownloadDialog {
   private fileNameTouched: boolean = false;
   /** 当前 URL 的自动推导名（fetchMode 比较基准） */
   private derivedName: string = '';
+  /** 程序写入过的文件名（回显守卫用） */
+  private autoNames: Set<string> = new Set<string>();
+  /** 预填地址（预填名可能来自浏览器/剪贴板，不按地址重推） */
+  private prefilledUrl: string = '';
 
   aboutToAppear(): void {
     this.generation++;
@@ -68,8 +73,11 @@ export struct NewDownloadDialog {
     // saveDir 展示经 FolderAlgo 解析（D5）：Manual→拷贝目标 URI（userSelected/recentFolders[0]）/
     // Auto（null）→沙箱 downloadDir；既有行替换、语义等价（原恒沙箱目录）
     const cfg: Config = Config.getInstance();
-    this.saveDir = manualDownloadFolder(cfg.getFolderSelectionMode(), cfg.getRecentFolders(),
-      cfg.getUserSelectedDownloadFolder(), cfg.getDownloadDir()) ?? cfg.getDownloadDir();
+    // 2026-11-22：显示成品最终位置——选过保存目录时为该目录（按类型自动分类时为其下分类子文件夹），
+    // 否则为应用内下载目录
+    const userFolder: string = SaveDirectory.userFolder();
+    this.saveDir = userFolder.length > 0 ? displayFolder(userFolder) +
+      (cfg.getFolderSelectionMode() === FOLDER_MODE_MANUAL ? '' : '/…') : cfg.getDownloadDir();
     // U5.2 预填块（ShowNewDownloadDialog :263-276 message 分支同位）：三写不置 fileNameTouched
     // （不触回显守卫）；initialUrl 非法/空跳过；消费后即清防重开残留
     const initial: string = this.model.initialUrl;
@@ -78,6 +86,8 @@ export struct NewDownloadDialog {
       const derived: string = fileNameFromUrl(initial);
       this.derivedName = derived;
       this.fileName = this.model.initialName.length > 0 ? this.model.initialName : derived;
+      this.autoNames.add(this.fileName);
+      this.prefilledUrl = initial;
     }
     this.model.initialUrl = '';
     this.model.initialName = '';
@@ -97,6 +107,7 @@ export struct NewDownloadDialog {
       const derived: string = fileNameFromUrl(value);
       this.derivedName = derived;
       if (!this.fileNameTouched) {
+        this.autoNames.add(derived);
         this.fileName = derived;
       }
     }
@@ -104,7 +115,9 @@ export struct NewDownloadDialog {
 
   private handleNameChange(value: string): void {
     // 回显守卫：程序化赋值（UrlChanged 自动推导）触发的 onChange 不置 touched 旗标
-    if (value !== this.fileName) {
+    // 2026-11-22：快速输入/粘贴地址时 onChange 回显可能晚到（值为更早一次的推导名），程序写入过的名字
+    // 一律不算用户修改
+    if (value !== this.fileName && !this.autoNames.has(value)) {
       this.fileNameTouched = true;
     }
     this.fileName = value;
@@ -126,6 +139,15 @@ export struct NewDownloadDialog {
     // 与 C# new Uri() 的 RFC 空白归一等价（Helpers.cs:45-56）：校验后提交前剥离首尾空白，
     // 防带空白 URL 直发传输层→连接期重试 10×10s 的『莫名失败』体验（独立复核 low）
     this.url = this.url.trim();
+    // 2026-11-22：用户没改过文件名时按最终地址重新推导（输入过程中的回显可能留下中间结果）
+    if (!this.fileNameTouched && this.url !== this.prefilledUrl) {
+      const finalName: string = fileNameFromUrl(this.url);
+      if (finalName.length > 0) {
+        this.derivedName = finalName;
+        this.autoNames.add(finalName);
+        this.fileName = finalName;
+      }
+    }
     const fetchMode: number = (this.fileNameTouched || this.fileName !== this.derivedName)
       ? FileNameFetchMode.None
       : FileNameFetchMode.FileNameAndExtension;

@@ -23,10 +23,13 @@
  * ArkTS 合规：禁正则字面量（无正则需求）、Record 字面量引号键、显式返回类型。
  */
 
+import { currentFallbackUserAgent } from './TransportPolicy';
+
 /** 六键默认头（对照 SingleSourceHTTPDownloader.cs:519-530 逐键；UA 字面量锚 Config.cs:52） */
 export function sixDefaultHeaders(url: string): Record<string, string> {
   const headers: Record<string, string> = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/97.0.4692.99 Safari/537.36',
+    // 2026-11-22：UA 取设置页「高级 › 用户代理」（TransportPolicy 由 Config 同步；worker 内为内置默认）
+    'User-Agent': currentFallbackUserAgent(),
     'Accept': '*/*',
     'Accept-Encoding': 'identity',
     'Accept-Language': 'en-US',

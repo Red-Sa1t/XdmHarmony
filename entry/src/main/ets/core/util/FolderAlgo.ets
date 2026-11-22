@@ -79,3 +79,24 @@ export function downloadFolderByFileName(fileName: string, categories: CategoryD
   }
   return downloadDir;
 }
+
+/** 2026-11-22：文件名 → 分类子文件夹名（设置页「下载类别」按扩展名匹配；无匹配/名非法返回 ''） */
+export function categoryFolderFor(fileName: string, categories: CategoryDef[]): string {
+  const dot: number = fileName.lastIndexOf('.');
+  const ext: string = dot > 0 ? fileName.slice(dot).toUpperCase() : '';
+  if (ext.length === 0) {
+    return '';
+  }
+  for (let i = 0; i < categories.length; i++) {
+    const category: CategoryDef = categories[i];
+    if (category.fileExtensions.includes(ext)) {
+      const name: string = category.defaultFolderName.trim();
+      if (name.length === 0 || name === '.' || name === '..' || name.indexOf('/') >= 0 ||
+        name.indexOf('\\') >= 0) {
+        return '';
+      }
+      return name;
+    }
+  }
+  return '';
+}
