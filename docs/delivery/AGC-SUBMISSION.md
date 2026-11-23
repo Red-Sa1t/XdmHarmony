@@ -11,7 +11,7 @@
 | 应用名称 | XDM下载管理器 / XDM Download Manager（2026-11-19 定稿，已改 app_name 三语言键与 EntryAbility 标签） |
 | 分类 | 实用工具 > 下载管理（与 store-listing 一致） |
 | 支持设备 | phone / 2in1（PC） |
-| 版本 | 1.0.0（versionCode 1000000） |
+| 版本 | 1.0.1（versionCode 1000001）；1.0.0（1000000）已上架 |
 | 开源许可 | GPL-2.0（衍生自 subhra74/xdm） |
 
 ## 2. 应用描述（商店文案）

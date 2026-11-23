@@ -1,8 +1,8 @@
 # XDM下载管理器（鸿蒙 PC）：上架准备清单（包名 com.neuohos.xdm）
 
-## 当前上架状态（2026-11-20）
+## 当前上架状态（2026-11-23：1.0.0 已上架，1.0.1 待提交）
 
-**应用名称**：XDM下载管理器（英文 XDM Download Manager）　**包名**：`com.neuohos.xdm`　**版本**：1.0.0（1000000）　**vendor**：`neuohos`　**设备类型**：仅 2in1（PC）
+**应用名称**：XDM下载管理器（英文 XDM Download Manager）　**包名**：`com.neuohos.xdm`　**版本**：1.0.1（1000001）；1.0.0（1000000）已上架　**vendor**：`neuohos`　**设备类型**：仅 2in1（PC）
 
 已就绪：
 - **功能与质量**：除下载外的全部功能已在 PC 模拟器（2in1，API 24）全量检测，探针单元 P0~P7 全过并与真机基线一致；主机测试 630 项（625 通过、5 跳过）、Hypium 642/642（2026-11-20 runDir `2026-11-20T08-30-28-122Z-a5f2925e`）。检测与修复明细见 `docs/delivery/DELIVERY.md` C.6 与 D 档 1。
@@ -15,7 +15,11 @@
 - **键盘快捷键**（2026-11-20）：Ctrl+N 新建下载、Ctrl+A 全选当前列表、Delete 删除选中（弹确认）、Esc 取消选择、Ctrl+F 定位搜索框；搜索框获焦时 Delete/Ctrl+A/Esc 留给文本编辑。模拟器实测 Ctrl+A、Esc、Delete、Ctrl+N 生效；Ctrl+F 未实测（模拟器聚焦输入框会弹第三方输入法隐私协议，未代为同意）。
 - **商店版界面**：不可用的占位入口已移除（导出/导入、帮助、报告问题、检查更新、视频向导、队列/计划任务）；"移除已完成的任务"与"关于"已实现；内部测试页在 release 包中不可达（实测 `--ps page probe` 落主界面）。
 
-- **上传包（.app）**：`artifacts/XdmDownloadManager-1.0.0-release-signed.app`（2026-11-23 重建，含首启授权弹窗修复、设置可用性修复与语言跟随系统修复，3,897,359 B，SHA-256 `a45cc9adec6499062aaae99b9398dd75b814e8ddadd1da174bdd9ace4a002f01`）。发布证书签名（Release 证书，有效期至 2029-10-15，链至 Huawei CBG Root CA G2）；内嵌 Profile 与 `xdm_publishRelease.p7b` 逐字节一致（type release、app_gallery、`com.neuohos.xdm`、allowed-acls 含 READ_PASTEBOARD）；`hap-sign-tool verify-app` 校验 .app 通过，同次构建的发布签名 HAP 也校验通过。pack.info：Release、compatible 23 / target 24；包内 HAP `buildMode=release`、`debug=false`、deviceTypes 仅 2in1。.app 内的 HAP 为未签名形态，由 .app 整包签名覆盖（当前 SDK 的打包方式）。发布签名包不能直接装机，回归仍用调试签名包。
+- **上传包（.app）**：`artifacts/XdmDownloadManager-1.0.1-release-signed.app`（1.0.1，2026-11-23 构建，含设置可用性修复与语言跟随系统修复，3,896,742 B，SHA-256 `f4d0a0baf8a6ae0d214fade9d8bd6f9588aafc70b550a33459cc3e6d232b962d`，pack.info version 1000001 / 1.0.1）。发布证书签名（Release 证书，有效期至 2029-10-15，链至 Huawei CBG Root CA G2）；内嵌 Profile 与 `xdm_publishRelease.p7b` 逐字节一致（type release、app_gallery、`com.neuohos.xdm`、allowed-acls 含 READ_PASTEBOARD）；`hap-sign-tool verify-app` 校验 .app 通过，同次构建的发布签名 HAP 也校验通过。pack.info：Release、compatible 23 / target 24；包内 HAP `buildMode=release`、`debug=false`、deviceTypes 仅 2in1。.app 内的 HAP 为未签名形态，由 .app 整包签名覆盖（当前 SDK 的打包方式）。发布签名包不能直接装机，回归仍用调试签名包。
+
+## 1.0.1 更新提交（2026-11-23）
+
+1.0.0（1000000）已上架。1.0.1（versionCode 1000001）包含设置可用性修复与语言"跟随系统"实时生效（见下文两节），上传包为 `artifacts/XdmDownloadManager-1.0.1-release-signed.app`。提交步骤：AGC › 应用 › 分发 › 版本信息 › 新建版本 → 上传 1.0.1 .app → "新版本特性"粘贴 `store-listing/应用介绍.md` 的 1.0.1 条目 → 审核备注沿用 AGC-SUBMISSION §6（含体验地址）→ 提交审核。若审核再要求演示录屏，可沿用 1.0.0 的录屏（核心流程未变）。
 
 ## 审核意见处理（2026-11-22，第 1 轮）
 
