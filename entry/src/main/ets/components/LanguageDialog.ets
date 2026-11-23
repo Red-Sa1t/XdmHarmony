@@ -77,6 +77,19 @@ export struct LanguageDialog {
         ' errMessage=' + (err.message ?? ''));
       return;
     }
+    if (tag === 'default') {
+      // 2026-11-23：运行中切回"跟随系统"时 setAppPreferredLanguage('default') 不会触发界面刷新
+      // （实测需重启才生效）——再把当前系统语言推给应用上下文，界面立即切换
+      try {
+        const ctx = this.getUIContext().getHostContext();
+        if (ctx !== undefined) {
+          ctx.getApplicationContext().setLanguage(i18n.System.getSystemLanguage());
+        }
+      } catch (e) {
+        const err = e as BusinessError;
+        hilog.error(0x0000, 'LanguageDialog', '%{public}s', 'follow-system refresh failed errCode=' + String(err.code));
+      }
+    }
     Config.getInstance().setLanguage(tag);
     this.onApplied();
     this.controller?.close();

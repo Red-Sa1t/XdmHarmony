@@ -44,12 +44,12 @@
  * BridgeServer 属 core/bridge/（不 import probe/，日志不含 [XDM_PROBE] 子串）。
  */
 
-import { AbilityConstant, bundleManager, ConfigurationConstant, UIAbility, Want } from '@kit.AbilityKit';
+import { AbilityConstant, bundleManager, Configuration, ConfigurationConstant, UIAbility, Want } from '@kit.AbilityKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { window } from '@kit.ArkUI';
 import { i18n } from '@kit.LocalizationKit';
 import { notificationManager } from '@kit.NotificationKit';
-import { BusinessError } from '@kit.BasicServicesKit';
+import { BusinessError, commonEventManager } from '@kit.BasicServicesKit';
 import { Config } from '../core/Config';
 import { DownloadStore } from '../core/db/DownloadStore';
 import { Scheduler } from '../core/engine/Scheduler';
@@ -94,6 +94,9 @@ export default class EntryAbility extends UIAbility {
       hilog.error(DOMAIN, 'testTag', 'Failed to set preferred language. Cause: %{public}s',
         JSON.stringify(err));
     }
+    // 2026-11-23：记录启动时语言，onConfigurationUpdate 据此判断系统语言是否变化
+    AppStorage.setOrCreate<string>('xdmSystemLanguage', this.context.config.language ?? '');
+    this.subscribeLocaleChanged();
     // U1.1 数据层挂接：DownloadStore ready 门异步建库建表（Config.init 已上移先行）
     DownloadStore.getInstance().initialize(this.context).catch((err: BusinessError) => {
       hilog.error(DOMAIN, 'testTag', '%{public}s',
@@ -120,6 +123,16 @@ export default class EntryAbility extends UIAbility {
     });
   }
 
+  /** 2026-11-23：系统配置变化。语言设为"跟随系统"时，系统语言切换后 $r() 绑定的文字由框架刷新，
+   * 但启动时用 getStringSync 缓存的标签（状态列、进度窗、完成通知标题等）不会变——经 AppStorage
+   * 通知 Index 重新装载。 */
+  onConfigurationUpdate(newConfig: Configuration): void {
+    const language: string = newConfig.language ?? '';
+    if (language.length > 0 && language !== AppStorage.get<string>('xdmSystemLanguage')) {
+      AppStorage.setOrCreate<string>('xdmSystemLanguage', language);
+    }
+  }
+
   onNewWant(want: Want, launchParam: AbilityConstant.LaunchParam): void {
     hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onNewWant');
     if (!this.isProbeRoute(want)) {
@@ -132,6 +145,48 @@ export default class EntryAbility extends UIAbility {
 
   onDestroy(): void {
     hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onDestroy');
+    if (this.localeSubscriber !== undefined) {
+      commonEventManager.unsubscribe(this.localeSubscriber, (): void => {
+      });
+      this.localeSubscriber = undefined;
+    }
+  }
+
+  /** 2026-11-23：语言"跟随系统"的实时跟随。应用内从固定语言切回跟随系统时，LanguageDialog 用
+   * ApplicationContext.setLanguage 把当前系统语言推给界面（否则要重启才生效），此后应用语言被固定，
+   * 系统再切换语言时不再自动下发——订阅系统 LOCALE_CHANGED 事件，跟随系统时重新推送并刷新缓存标签。 */
+  private localeSubscriber: commonEventManager.CommonEventSubscriber | undefined = undefined;
+
+  private subscribeLocaleChanged(): void {
+    const info: commonEventManager.CommonEventSubscribeInfo = {
+      events: [commonEventManager.Support.COMMON_EVENT_LOCALE_CHANGED]
+    };
+    commonEventManager.createSubscriber(info).then((subscriber: commonEventManager.CommonEventSubscriber): void => {
+      this.localeSubscriber = subscriber;
+      commonEventManager.subscribe(subscriber, (err: BusinessError): void => {
+        if (err !== undefined && err !== null && err.code !== 0) {
+          hilog.error(DOMAIN, 'testTag', '%{public}s', 'locale subscribe failed errCode=' + String(err.code));
+          return;
+        }
+        this.onSystemLocaleChanged();
+      });
+    }).catch((err: BusinessError): void => {
+      hilog.error(DOMAIN, 'testTag', '%{public}s', 'locale subscriber create failed errCode=' + String(err.code));
+    });
+  }
+
+  private onSystemLocaleChanged(): void {
+    if (Config.getInstance().getLanguage() !== 'default') {
+      return;
+    }
+    try {
+      const systemLanguage: string = i18n.System.getSystemLanguage();
+      this.context.getApplicationContext().setLanguage(systemLanguage);
+      AppStorage.setOrCreate<string>('xdmSystemLanguage', systemLanguage);
+    } catch (e) {
+      const err = e as BusinessError;
+      hilog.error(DOMAIN, 'testTag', '%{public}s', 'follow system language failed errCode=' + String(err.code));
+    }
   }
 
   /**

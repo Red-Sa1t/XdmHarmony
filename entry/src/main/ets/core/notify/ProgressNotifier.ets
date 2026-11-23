@@ -118,6 +118,13 @@ export class ProgressNotifier {
     }
   }
 
+  /** 2026-11-23：语言变化（应用内切换或跟随系统时系统语言变化）后重读完成通知标题 */
+  reloadLabels(): void {
+    if (this.context !== undefined) {
+      this.init(this.context);
+    }
+  }
+
   // ---------- 事件转发面（Index 五 handler 尾部/探针事件袋尾部调用，同步不阻塞） ----------
 
   /** 下载起跑（handleStarted 尾部）：D8 覆盖最新文件名 + 0→非 0 申请锚。 */

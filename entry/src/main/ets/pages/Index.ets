@@ -233,6 +233,9 @@ struct Index {
   private progressHost: ProgressWindowHost = ProgressWindowHost.getInstance();
   private selectionSession: SelectionSession = new SelectionSession();
   private refreshModel: RefreshLinkModel = new RefreshLinkModel();
+  /** 2026-11-23：系统语言（EntryAbility.onConfigurationUpdate 写入）。语言设为"跟随系统"时，
+   * 系统切换语言后重新装载 getStringSync 缓存的标签 */
+  @StorageProp('xdmSystemLanguage') @Watch('onSystemLanguageChanged') systemLanguage: string = '';
   private refreshToken: number = 0;
   private refreshWindowToken: number = 0;
   private pendingRefreshId: string = '';
@@ -399,6 +402,13 @@ struct Index {
   /** 对话框标签装载（buildStatusLabels 同式：getStringSync(resId) + 英文 fallback） */
   /** 运行时切换语言（2026-11-19 修复：状态列/进度窗标签为启动时缓存，切换后仍显示旧语言）：
    * 原地改写 statusLabels（各行持同一引用）+ 双列表 reload 重建行 + 对话框/进度窗标签重载 */
+  private onSystemLanguageChanged(): void {
+    // 资源配置更新异步落地：稍后再读 getStringSync（与应用内切换语言同一路径）
+    setTimeout(() => {
+      this.reloadLocalizedLabels();
+    }, 300);
+  }
+
   private reloadLocalizedLabels(): void {
     const fresh: StatusLabels = this.buildStatusLabels();
     this.statusLabels.downloading = fresh.downloading;
@@ -407,6 +417,7 @@ struct Index {
     this.statusLabels.waiting = fresh.waiting;
     this.loadDialogLabels();
     this.progressHost.reloadLabels();
+    ProgressNotifier.getInstance().reloadLabels();
     this.inProgressDS.notifyDataReloaded();
     this.finishedDS.notifyDataReloaded();
     const v: number = AppStorage.get<number>('xdmLabelsVersion') ?? 0;
